@@ -76,17 +76,21 @@ function voteNumericValue(vote: VoteChoice | null) {
   if (!vote || vote.kind !== "estimate") {
     return null;
   }
-  const baseValue = Number(vote.base);
-  if (!Number.isFinite(baseValue)) {
+  const sequence = NUMERIC_CARD_VALUES.map((value) => Number(value));
+  const currentIndex = NUMERIC_CARD_VALUES.indexOf(vote.base);
+  if (currentIndex === -1) {
     return null;
   }
+  const currentValue = sequence[currentIndex];
   if (vote.modifier === "flat") {
-    return baseValue - 0.5;
+    const previousValue = sequence[Math.max(0, currentIndex - 1)];
+    return (previousValue + currentValue) / 2;
   }
   if (vote.modifier === "sharp") {
-    return baseValue + 0.5;
+    const nextValue = sequence[Math.min(sequence.length - 1, currentIndex + 1)];
+    return (currentValue + nextValue) / 2;
   }
-  return baseValue;
+  return currentValue;
 }
 
 function seatPosition(index: number, total: number) {
@@ -185,6 +189,7 @@ export function App() {
 
     const buckets = new Map<string, number>();
     const numericVotes: number[] = [];
+    const totalVotes = participants.filter((participant) => participant.vote).length;
 
     for (const participant of participants) {
       const label = voteLabel(participant.vote);
@@ -199,7 +204,14 @@ export function App() {
 
     return {
       average: numericVotes.length > 0 ? (numericVotes.reduce((sum, value) => sum + value, 0) / numericVotes.length).toFixed(2) : "N/A",
-      breakdown: [...buckets.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      totalVotes,
+      breakdown: [...buckets.entries()]
+        .map(([label, count]) => ({
+          label,
+          count,
+          ratio: totalVotes > 0 ? ((count / totalVotes) * 100).toFixed(0) : "0"
+        }))
+        .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label))
     };
   }, [participants, state?.phase]);
 
@@ -388,7 +400,7 @@ export function App() {
             <div className="meta-list">
               <div>
                 <span>当前阶段</span>
-                <strong>{state?.phase === "countdown" ? `倒计时 ${state.countdownValue}` : state?.phase === "voting" ? "投票中" : state?.phase === "revealed" ? "已翻牌" : "待开始"}</strong>
+                <strong>{state?.phase === "countdown" ? `翻牌倒计时 ${state.countdownValue}` : state?.phase === "voting" ? "投票中" : state?.phase === "revealed" ? "已翻牌" : "待开始"}</strong>
               </div>
               <div>
                 <span>已投票</span>
@@ -427,34 +439,20 @@ export function App() {
                 开启新一轮
               </button>
               <button className="secondary-button" type="button" disabled={!isHost || votedCount === 0} onClick={() => sendMessage({ type: "reveal_votes" })}>
-                翻牌并 review
+                翻牌
               </button>
-            </div>
-          </div>
-
-          <div className="panel">
-            <div className="panel-header">
-              <h3>细节偏移</h3>
-              <span className="badge muted-badge">可选</span>
-            </div>
-            <div className="modifier-row">
-              {MODIFIER_OPTIONS.map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  className={`modifier-button ${modifier === option ? "active" : ""}`}
-                  onClick={() => setModifier(option)}
-                >
-                  {option === "flat" ? "♭ 略小" : option === "sharp" ? "♯ 略大" : "标准"}
-                </button>
-              ))}
             </div>
           </div>
         </aside>
 
         <main className="table-zone">
           <div className="table-frame">
-            {state?.phase === "countdown" ? <div className="countdown-overlay">{state.countdownValue}</div> : null}
+            {state?.phase === "countdown" ? (
+              <div className="countdown-overlay">
+                <span>{state.countdownValue}</span>
+                <small>即将翻牌</small>
+              </div>
+            ) : null}
             <div className="ellipse-table">
               <div className="table-center">
                 <p>Scrum Poker Table</p>
@@ -472,6 +470,36 @@ export function App() {
               </article>
             ))}
           </div>
+
+          <div className="panel table-results-panel">
+            <div className="panel-header">
+              <h3>统计结果</h3>
+              <span className="badge">{state?.phase === "revealed" ? "已开放" : "待翻牌"}</span>
+            </div>
+            {stats ? (
+              <div className="results-grid">
+                <div className="stats-highlight">
+                  <span>全局算术平均</span>
+                  <strong>{stats.average}</strong>
+                </div>
+                <div className="stats-highlight">
+                  <span>有效票数</span>
+                  <strong>{stats.totalVotes}</strong>
+                </div>
+                <div className="breakdown-strip">
+                  {stats.breakdown.map((item) => (
+                    <div key={item.label} className="breakdown-item">
+                      <span>{item.label}</span>
+                      <strong>{item.count} 票</strong>
+                      <small>{item.ratio}%</small>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="empty-state">翻牌后会展示全局算术平均和所有出现值的频率分布。</div>
+            )}
+          </div>
         </main>
 
         <aside className="side-panel">
@@ -479,6 +507,18 @@ export function App() {
             <div className="panel-header">
               <h3>投票卡</h3>
               <span className="badge muted-badge">{voteLabel(self?.vote ?? null)}</span>
+            </div>
+            <div className="modifier-row modifier-near-cards">
+              {MODIFIER_OPTIONS.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  className={`modifier-button ${modifier === option ? "active" : ""}`}
+                  onClick={() => setModifier(option)}
+                >
+                  {option === "flat" ? "♭ 略小" : option === "sharp" ? "♯ 略大" : "标准"}
+                </button>
+              ))}
             </div>
             <div className="card-grid">
               {NUMERIC_CARD_VALUES.map((value) => {
@@ -531,31 +571,6 @@ export function App() {
                 清空
               </button>
             </div>
-          </div>
-
-          <div className="panel">
-            <div className="panel-header">
-              <h3>统计结果</h3>
-              <span className="badge">{state?.phase === "revealed" ? "已开放" : "待翻牌"}</span>
-            </div>
-            {stats ? (
-              <div className="stats-stack">
-                <div className="stats-highlight">
-                  <span>算术平均</span>
-                  <strong>{stats.average}</strong>
-                </div>
-                <div className="breakdown-list">
-                  {stats.breakdown.map(([label, count]) => (
-                    <div key={label} className="breakdown-item">
-                      <span>{label}</span>
-                      <strong>{count} 票</strong>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="empty-state">翻牌后会展示票型分布和按 `♭/♯` 修正后的算术平均。</div>
-            )}
           </div>
         </aside>
       </section>

@@ -3,7 +3,7 @@ import http from "node:http";
 import path from "node:path";
 import { WebSocketServer, WebSocket } from "ws";
 
-type NumericCardValue = "0" | "1/2" | "1" | "2" | "3" | "5" | "8" | "13" | "21" | "34";
+type NumericCardValue = "0" | "1" | "2" | "3" | "5" | "8" | "13" | "21" | "34";
 type SpecialCardValue = "?" | "☕";
 type VoteModifier = "flat" | "base" | "sharp";
 type RoomPhase = "lobby" | "countdown" | "voting" | "revealed";
@@ -159,9 +159,17 @@ function resetVotes(room: Room) {
   }
 }
 
-function startCountdown(room: Room) {
+function startVoting(room: Room) {
   clearCountdown(room);
   resetVotes(room);
+  room.phase = "voting";
+  room.countdownValue = null;
+  markUpdated(room);
+  broadcastRoom(room);
+}
+
+function startRevealCountdown(room: Room) {
+  clearCountdown(room);
   room.phase = "countdown";
   room.countdownValue = 3;
   markUpdated(room);
@@ -180,7 +188,7 @@ function startCountdown(room: Room) {
 
   room.countdownTimers.push(
     setTimeout(() => {
-      room.phase = "voting";
+      room.phase = "revealed";
       room.countdownValue = null;
       markUpdated(room);
       broadcastRoom(room);
@@ -309,18 +317,18 @@ wss.on("connection", (socket) => {
           sendError("只有主持人可以开启新一轮。");
           return;
         }
-        startCountdown(currentRoom);
+        startVoting(currentRoom);
         break;
       case "reveal_votes":
         if (!isHost(currentRoom, currentParticipant)) {
           sendError("只有主持人可以翻牌。");
           return;
         }
-        currentRoom.phase = "revealed";
-        currentRoom.countdownValue = null;
-        clearCountdown(currentRoom);
-        markUpdated(currentRoom);
-        broadcastRoom(currentRoom);
+        if (![...currentRoom.participants.values()].some((participant) => participant.vote)) {
+          sendError("至少有一位成员投票后才能翻牌。");
+          return;
+        }
+        startRevealCountdown(currentRoom);
         break;
       default:
         sendError("不支持的消息类型。");

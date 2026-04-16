@@ -1,4 +1,4 @@
-export const NUMERIC_CARD_VALUES = ["0", "1/2", "1", "2", "3", "5", "8", "13", "21", "34"] as const;
+export const NUMERIC_CARD_VALUES = ["0", "1", "2", "3", "5", "8", "13", "21", "34"] as const;
 export const SPECIAL_CARD_VALUES = ["?", "☕"] as const;
 export const MODIFIER_OPTIONS = ["flat", "base", "sharp"] as const;
 

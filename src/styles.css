@@ -31,6 +31,7 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  overflow: hidden;
 }
 
 button,
@@ -223,7 +224,12 @@ input {
 }
 
 .room-shell {
-  padding: 20px 0 36px;
+  height: 100vh;
+  padding: 12px 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 12px;
+  overflow: hidden;
 }
 
 .topbar {
@@ -231,8 +237,8 @@ input {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 22px 24px;
-  margin-bottom: 18px;
+  padding: 16px 18px;
+  margin-bottom: 0;
 }
 
 .room-title {
@@ -293,25 +299,29 @@ input {
 
 .room-layout {
   display: grid;
-  grid-template-columns: 320px minmax(0, 1fr) 320px;
-  gap: 18px;
-  align-items: start;
+  grid-template-columns: 280px minmax(0, 1fr) 300px;
+  gap: 12px;
+  align-items: stretch;
+  min-height: 0;
 }
 
 .side-panel {
   display: grid;
-  gap: 18px;
+  gap: 12px;
+  min-height: 0;
+  grid-auto-rows: minmax(0, auto);
 }
 
 .panel {
-  padding: 20px;
+  padding: 16px;
+  min-height: 0;
 }
 
 .meta-list,
 .stats-stack {
   display: grid;
-  gap: 12px;
-  margin-top: 14px;
+  gap: 10px;
+  margin-top: 10px;
 }
 
 .meta-list > div,
@@ -338,13 +348,17 @@ input {
 }
 
 .table-zone {
-  min-height: 760px;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 12px;
 }
 
 .table-frame {
   position: relative;
-  min-height: 760px;
-  border-radius: 36px;
+  min-height: 0;
+  height: 100%;
+  border-radius: 28px;
   border: 1px solid var(--panel-border);
   background:
     radial-gradient(circle at center, rgba(88, 153, 255, 0.08), transparent 34%),
@@ -354,7 +368,7 @@ input {
 
 .ellipse-table {
   position: absolute;
-  inset: 18% 12%;
+  inset: 16% 10% 14%;
   border-radius: 50%;
   background:
     radial-gradient(circle at 50% 38%, rgba(246, 178, 83, 0.2), transparent 32%),
@@ -388,10 +402,10 @@ input {
 
 .seat-card {
   position: absolute;
-  width: 124px;
+  width: 108px;
   transform: translate(-50%, -50%);
-  padding: 12px 14px;
-  border-radius: 18px;
+  padding: 9px 10px;
+  border-radius: 16px;
   background: rgba(11, 14, 22, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.08);
   text-align: center;
@@ -404,17 +418,18 @@ input {
 
 .seat-name {
   display: block;
-  font-size: 0.9rem;
+  font-size: 0.82rem;
 }
 
 .seat-card strong {
   display: block;
-  margin-top: 4px;
-  font-size: 1.05rem;
+  margin-top: 2px;
+  font-size: 0.94rem;
 }
 
 .seat-card small {
   color: var(--text-muted);
+  font-size: 0.72rem;
 }
 
 .countdown-overlay {
@@ -424,21 +439,34 @@ input {
   display: grid;
   place-items: center;
   background: rgba(10, 12, 17, 0.45);
-  font-size: clamp(6rem, 12vw, 10rem);
+  font-size: clamp(5rem, 10vw, 8rem);
   font-weight: 700;
   backdrop-filter: blur(8px);
+  text-align: center;
+}
+
+.countdown-overlay span,
+.countdown-overlay small {
+  display: block;
+}
+
+.countdown-overlay small {
+  margin-top: 6px;
+  font-size: 1rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(82px, 1fr));
-  gap: 12px;
-  margin-top: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 10px;
 }
 
 .vote-card {
-  min-height: 98px;
-  border-radius: 20px;
+  min-height: 78px;
+  border-radius: 16px;
   background: linear-gradient(180deg, rgba(142, 199, 255, 0.12), rgba(255, 255, 255, 0.04));
   color: #fff;
   display: grid;
@@ -449,7 +477,7 @@ input {
 
 .vote-card span {
   display: block;
-  font-size: 1.45rem;
+  font-size: 1.2rem;
   font-weight: 700;
 }
 
@@ -464,19 +492,42 @@ input {
 
 .special-card,
 .clear-card {
-  min-height: 82px;
+  min-height: 66px;
 }
 
-.breakdown-list {
+.modifier-near-cards {
+  margin-top: 10px;
+}
+
+.table-results-panel {
+  padding: 12px 16px;
+}
+
+.results-grid {
   display: grid;
+  grid-template-columns: 160px 140px minmax(0, 1fr);
   gap: 10px;
+  margin-top: 10px;
+  align-items: stretch;
+}
+
+.breakdown-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+  gap: 8px;
 }
 
 .breakdown-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--panel-soft);
+}
+
+.breakdown-item small {
+  color: var(--text-muted);
 }
 
 .empty-state,
@@ -485,8 +536,8 @@ input {
 }
 
 .empty-state {
-  padding: 18px;
-  border-radius: 18px;
+  padding: 12px;
+  border-radius: 14px;
   background: var(--panel-soft);
 }
 
@@ -507,6 +558,10 @@ input {
 }
 
 @media (max-width: 1240px) {
+  body {
+    overflow: auto;
+  }
+
   .room-layout {
     grid-template-columns: 1fr;
   }
@@ -516,7 +571,11 @@ input {
   }
 
   .table-frame {
-    min-height: 620px;
+    min-height: 520px;
+  }
+
+  .results-grid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -544,19 +603,23 @@ input {
   }
 
   .table-frame {
-    min-height: 560px;
+    min-height: 460px;
   }
 
   .ellipse-table {
-    inset: 24% 8%;
+    inset: 24% 8% 16%;
   }
 
   .seat-card {
-    width: 102px;
-    padding: 10px;
+    width: 94px;
+    padding: 8px;
   }
 
   .modifier-row {
     grid-template-columns: 1fr;
+  }
+
+  .card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
