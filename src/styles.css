@@ -90,6 +90,16 @@ button:disabled {
   margin-bottom: 28px;
 }
 
+.landing-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 18px;
+}
+
+.compact-toolbar {
+  margin-bottom: 16px;
+}
+
 .eyebrow {
   margin: 0 0 10px;
   color: var(--accent);
@@ -171,6 +181,36 @@ h2 {
   gap: 12px;
 }
 
+.language-picker {
+  display: grid;
+  gap: 6px;
+  min-width: 180px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.language-picker select {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  appearance: none;
+}
+
+.language-picker small {
+  color: var(--text-muted);
+}
+
+.topbar .language-picker {
+  min-width: 140px;
+}
+
+.topbar .language-picker small {
+  display: none;
+}
+
 label {
   display: grid;
   gap: 8px;
@@ -216,6 +256,30 @@ input {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
+}
+
+.modifier-section {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 18px;
+  background: var(--panel-soft);
+  display: grid;
+  gap: 10px;
+}
+
+.modifier-copy strong,
+.modifier-copy p {
+  display: block;
+  margin: 0;
+}
+
+.modifier-copy strong {
+  font-size: 0.96rem;
+}
+
+.modifier-copy p {
+  color: var(--text-muted);
+  font-size: 0.86rem;
 }
 
 .modifier-button.active {
@@ -464,6 +528,13 @@ input {
   margin-top: 10px;
 }
 
+.special-card-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
 .vote-card {
   min-height: 78px;
   border-radius: 16px;
@@ -493,10 +564,6 @@ input {
 .special-card,
 .clear-card {
   min-height: 66px;
-}
-
-.modifier-near-cards {
-  margin-top: 10px;
 }
 
 .table-results-panel {
