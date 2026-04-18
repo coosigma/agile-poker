@@ -210,7 +210,7 @@ app.get("/api/rooms/:roomId", (request, response) => {
 });
 
 if (process.env.NODE_ENV === "production") {
-  const clientPath = path.resolve(process.cwd(), "dist");
+  const clientPath = path.resolve(process.cwd(), "frontend/dist");
   app.use(express.static(clientPath));
   app.get("*", (_request, response) => {
     response.sendFile(path.join(clientPath, "index.html"));

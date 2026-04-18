@@ -2,3 +2,5 @@ node_modules
 dist
 dist-server
 *.tsbuildinfo
+frontend/dist/
+backend/dist/

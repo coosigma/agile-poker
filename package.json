@@ -5,10 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "concurrently \"npm:dev:web\" \"npm:dev:server\"",
-    "dev:web": "vite",
-    "dev:server": "tsx watch server/index.ts",
-    "build": "tsc -b && vite build",
-    "start": "NODE_ENV=production tsx server/index.ts"
+    "dev:web": "vite --config frontend/vite.config.ts",
+    "dev:server": "tsx watch backend/src/index.ts",
+    "build": "tsc -b && vite build --config frontend/vite.config.ts",
+    "start": "NODE_ENV=production node backend/dist/index.js"
   },
   "dependencies": {
     "express": "^4.21.2",
