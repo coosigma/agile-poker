@@ -1,6 +1,7 @@
 import express from "express";
 import http from "node:http";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { WebSocketServer, WebSocket } from "ws";
 
 type NumericCardValue = "0" | "1" | "2" | "3" | "5" | "8" | "13" | "21" | "34";
@@ -210,7 +211,7 @@ app.get("/api/rooms/:roomId", (request, response) => {
 });
 
 if (process.env.NODE_ENV === "production") {
-  const clientPath = path.resolve(process.cwd(), "frontend/dist");
+  const clientPath = path.resolve(fileURLToPath(new URL("../../frontend/dist", import.meta.url)));
   app.use(express.static(clientPath));
   app.get("*", (_request, response) => {
     response.sendFile(path.join(clientPath, "index.html"));
