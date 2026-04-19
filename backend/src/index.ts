@@ -1,9 +1,3 @@
-import express from "express";
-import http from "node:http";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { WebSocketServer, WebSocket } from "ws";
-
 type NumericCardValue = "0" | "1" | "2" | "3" | "5" | "8" | "13" | "21" | "34";
 type SpecialCardValue = "?" | "☕";
 type VoteModifier = "flat" | "base" | "sharp";
@@ -29,12 +23,26 @@ type ClientMessage =
   | { type: "start_round" }
   | { type: "reveal_votes" };
 
+interface WorkerWebSocket {
+  accept(): void;
+  send(message: string): void;
+  close(code?: number, reason?: string): void;
+  addEventListener(type: "message", listener: (event: { data: string }) => void): void;
+  addEventListener(type: "close", listener: (event: Event) => void): void;
+  addEventListener(type: "error", listener: (event: Event) => void): void;
+  readyState: number;
+}
+
+declare const WebSocketPair: {
+  new (): { 0: WorkerWebSocket; 1: WorkerWebSocket };
+};
+
 interface Participant {
   id: string;
   name: string;
   vote: VoteChoice | null;
   connected: boolean;
-  socket: WebSocket | null;
+  socket: WorkerWebSocket | null;
 }
 
 interface Room {
@@ -43,16 +51,21 @@ interface Room {
   ticketTitle: string;
   phase: RoomPhase;
   countdownValue: number | null;
-  countdownTimers: NodeJS.Timeout[];
+  countdownTimers: ReturnType<typeof setTimeout>[];
   participants: Map<string, Participant>;
   updatedAt: number;
 }
 
-const PORT = Number(process.env.PORT ?? 8787);
-const app = express();
-const server = http.createServer(app);
-const wss = new WebSocketServer({ server, path: "/ws" });
+const SOCKET_OPEN = 1;
 const rooms = new Map<string, Room>();
+
+// Express concepts removed here:
+// - app.listen / Node HTTP server
+// - route registration through express().get()/put()
+// Worker equivalent:
+// - one export default fetch() handler
+// - request pathname branching
+// - WebSocketPair for /ws upgrades
 
 function randomId() {
   return Math.random().toString(36).slice(2, 10);
@@ -68,6 +81,7 @@ function createRoomRecord(roomId: string) {
   if (existing) {
     return existing;
   }
+
   const room: Room = {
     roomId: normalizedId,
     hostId: null,
@@ -129,7 +143,7 @@ function toSerializableRoom(room: Room) {
 function broadcastRoom(room: Room) {
   const state = toSerializableRoom(room);
   for (const participant of room.participants.values()) {
-    if (participant.socket?.readyState === WebSocket.OPEN) {
+    if (participant.socket?.readyState === SOCKET_OPEN) {
       participant.socket.send(
         JSON.stringify({
           type: "room_state",
@@ -198,43 +212,57 @@ function startRevealCountdown(room: Room) {
   );
 }
 
-app.use(express.json());
-
-app.put("/api/rooms/:roomId", (request, response) => {
-  const room = createRoomRecord(request.params.roomId);
-  response.json({ ok: true, roomId: room.roomId });
-});
-
-app.get("/api/rooms/:roomId", (request, response) => {
-  const room = getRoom(request.params.roomId);
-  response.json({ exists: Boolean(room) });
-});
-
-if (process.env.NODE_ENV === "production") {
-  const clientPath = path.resolve(fileURLToPath(new URL("../../frontend/dist", import.meta.url)));
-  app.use(express.static(clientPath));
-  app.get("*", (_request, response) => {
-    response.sendFile(path.join(clientPath, "index.html"));
-  });
-} else {
-  app.get("/health", (_request, response) => {
-    response.json({ ok: true });
+function jsonResponse(body: unknown, init?: ResponseInit) {
+  return new Response(JSON.stringify(body), {
+    ...init,
+    headers: {
+      "content-type": "application/json; charset=utf-8",
+      ...(init?.headers ?? {})
+    }
   });
 }
 
-wss.on("connection", (socket) => {
+function textResponse(body: string, init?: ResponseInit) {
+  return new Response(body, {
+    ...init,
+    headers: {
+      "content-type": "text/plain; charset=utf-8",
+      ...(init?.headers ?? {})
+    }
+  });
+}
+
+function createWebSocketResponse(request: Request) {
+  if (request.headers.get("Upgrade") !== "websocket") {
+    return textResponse("Expected WebSocket upgrade.", { status: 426, headers: { Upgrade: "websocket" } });
+  }
+
+  const pair = new WebSocketPair();
+  const clientSocket = pair[0];
+  const serverSocket = pair[1];
+  serverSocket.accept();
+
   let currentRoom: Room | null = null;
   let currentParticipant: Participant | null = null;
 
   const sendError = (message: string) => {
-    socket.send(JSON.stringify({ type: "error", message }));
+    try {
+      serverSocket.send(JSON.stringify({ type: "error", message }));
+    } catch {
+      // Socket may already be closed; keep the Worker request alive.
+    }
   };
 
-  socket.on("message", (rawData) => {
+  serverSocket.addEventListener("message", (event) => {
+    if (typeof event.data !== "string") {
+      sendError("消息格式不正确。");
+      return;
+    }
+
     let message: ClientMessage;
 
     try {
-      message = JSON.parse(rawData.toString()) as ClientMessage;
+      message = JSON.parse(event.data) as ClientMessage;
     } catch {
       sendError("消息格式不正确。");
       return;
@@ -259,7 +287,7 @@ wss.on("connection", (socket) => {
         name: message.name?.trim() || "匿名成员",
         vote: null,
         connected: true,
-        socket
+        socket: serverSocket
       };
 
       currentRoom.participants.set(participantId, currentParticipant);
@@ -336,7 +364,7 @@ wss.on("connection", (socket) => {
     }
   });
 
-  socket.on("close", () => {
+  serverSocket.addEventListener("close", () => {
     if (currentRoom && currentParticipant) {
       currentParticipant.connected = false;
       currentParticipant.socket = null;
@@ -346,8 +374,52 @@ wss.on("connection", (socket) => {
       cleanupRoom(currentRoom);
     }
   });
-});
 
-server.listen(PORT, () => {
-  console.log(`Agile Poker server listening on http://localhost:${PORT}`);
-});
+  serverSocket.addEventListener("error", () => {
+    console.warn("Worker WebSocket error occurred.");
+  });
+
+  return new Response(null, {
+    status: 101,
+    webSocket: clientSocket
+  } as any);
+}
+
+async function handleApiRequest(request: Request, url: URL) {
+  if (request.method === "GET" && url.pathname === "/api/health") {
+    return jsonResponse({ ok: true });
+  }
+
+  if (url.pathname.startsWith("/api/rooms/")) {
+    const roomId = decodeURIComponent(url.pathname.slice("/api/rooms/".length));
+    if (!roomId) {
+      return jsonResponse({ error: "Missing room id" }, { status: 400 });
+    }
+
+    if (request.method === "PUT") {
+      const room = createRoomRecord(roomId);
+      return jsonResponse({ ok: true, roomId: room.roomId });
+    }
+
+    if (request.method === "GET") {
+      const room = getRoom(roomId);
+      return jsonResponse({ exists: Boolean(room) });
+    }
+
+    return jsonResponse({ error: "Method not allowed" }, { status: 405 });
+  }
+
+  return jsonResponse({ error: "Not found" }, { status: 404 });
+}
+
+export default {
+  async fetch(request: Request): Promise<Response> {
+    const url = new URL(request.url);
+
+    if (url.pathname === "/ws") {
+      return createWebSocketResponse(request);
+    }
+
+    return handleApiRequest(request, url);
+  }
+};

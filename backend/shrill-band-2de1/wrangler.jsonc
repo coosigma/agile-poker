@@ -4,7 +4,7 @@
  */
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "shrill-band-2de1",
+	"name": "agile-poker-backend",
 	"main": "src/index.ts",
 	"compatibility_date": "2026-04-19",
 	"observability": {
