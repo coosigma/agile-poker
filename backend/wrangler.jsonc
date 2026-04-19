@@ -13,6 +13,20 @@
 	"upload_source_maps": true,
 	"compatibility_flags": [
 		"nodejs_compat"
+	],
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "ROOM_DO",
+				"class_name": "RoomDO"
+			}
+		]
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_classes": ["RoomDO"]
+		}
 	]
 	/**
 	 * Smart Placement

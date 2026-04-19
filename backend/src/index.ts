@@ -1,21 +1,27 @@
+/**
+ * Cloudflare Worker + Durable Object
+ * Planning Poker backend
+ *
+ * ✅ WebSocket handling ONLY inside Durable Object
+ * ✅ Worker layer acts as router only
+ * ✅ WS requests are forwarded WITHOUT recreating Request
+ */
+
+/* =========================
+  Types
+========================= */
+
 type NumericCardValue = "0" | "1" | "2" | "3" | "5" | "8" | "13" | "21" | "34";
 type SpecialCardValue = "?" | "☕";
 type VoteModifier = "flat" | "base" | "sharp";
 type RoomPhase = "lobby" | "countdown" | "voting" | "revealed";
 
 type VoteChoice =
-  | {
-      kind: "estimate";
-      base: NumericCardValue;
-      modifier: VoteModifier;
-    }
-  | {
-      kind: "special";
-      value: SpecialCardValue;
-    };
+  | { kind: "estimate"; base: NumericCardValue; modifier: VoteModifier }
+  | { kind: "special"; value: SpecialCardValue };
 
 type ClientMessage =
-  | { type: "join_room"; roomId?: string; name?: string; claimHost?: boolean }
+  | { type: "join_room"; roomId: string; name?: string; claimHost?: boolean }
   | { type: "set_name"; name?: string }
   | { type: "set_ticket"; ticketTitle?: string }
   | { type: "vote"; vote?: VoteChoice }
@@ -23,49 +29,46 @@ type ClientMessage =
   | { type: "start_round" }
   | { type: "reveal_votes" };
 
-interface WorkerWebSocket {
-  accept(): void;
-  send(message: string): void;
-  close(code?: number, reason?: string): void;
-  addEventListener(type: "message", listener: (event: { data: string }) => void): void;
-  addEventListener(type: "close", listener: (event: Event) => void): void;
-  addEventListener(type: "error", listener: (event: Event) => void): void;
-  readyState: number;
+declare global {
+  interface ResponseInit {
+    webSocket?: WebSocket;
+  }
+
+  interface WebSocket {
+    accept(): void;
+  }
+}
+
+interface DurableObjectId {
+  toString(): string;
+}
+
+interface DurableObjectNamespace {
+  idFromName(name: string): DurableObjectId;
+  get(id: DurableObjectId): DurableObjectStub;
+}
+
+interface DurableObjectStub {
+  fetch(request: Request): Promise<Response>;
+}
+
+interface DurableObjectState {
+  id: DurableObjectId;
 }
 
 declare const WebSocketPair: {
-  new (): { 0: WorkerWebSocket; 1: WorkerWebSocket };
+  new (): { 0: WebSocket; 1: WebSocket };
 };
 
-interface Participant {
-  id: string;
-  name: string;
-  vote: VoteChoice | null;
-  connected: boolean;
-  socket: WorkerWebSocket | null;
+interface Env {
+  ROOM_DO: DurableObjectNamespace;
 }
 
-interface Room {
-  roomId: string;
-  hostId: string | null;
-  ticketTitle: string;
-  phase: RoomPhase;
-  countdownValue: number | null;
-  countdownTimers: ReturnType<typeof setTimeout>[];
-  participants: Map<string, Participant>;
-  updatedAt: number;
-}
+/* =========================
+  Helpers
+========================= */
 
 const SOCKET_OPEN = 1;
-const rooms = new Map<string, Room>();
-
-// Express concepts removed here:
-// - app.listen / Node HTTP server
-// - route registration through express().get()/put()
-// Worker equivalent:
-// - one export default fetch() handler
-// - request pathname branching
-// - WebSocketPair for /ws upgrades
 
 function randomId() {
   return Math.random().toString(36).slice(2, 10);
@@ -75,144 +78,7 @@ function normalizeRoomId(roomId: string) {
   return roomId.trim().toUpperCase();
 }
 
-function createRoomRecord(roomId: string) {
-  const normalizedId = normalizeRoomId(roomId);
-  const existing = rooms.get(normalizedId);
-  if (existing) {
-    return existing;
-  }
-
-  const room: Room = {
-    roomId: normalizedId,
-    hostId: null,
-    ticketTitle: "",
-    phase: "lobby",
-    countdownValue: null,
-    countdownTimers: [],
-    participants: new Map(),
-    updatedAt: Date.now()
-  };
-  rooms.set(normalizedId, room);
-  return room;
-}
-
-function getRoom(roomId: string) {
-  return rooms.get(normalizeRoomId(roomId)) ?? null;
-}
-
-function clearCountdown(room: Room) {
-  for (const timer of room.countdownTimers) {
-    clearTimeout(timer);
-  }
-  room.countdownTimers = [];
-}
-
-function markUpdated(room: Room) {
-  room.updatedAt = Date.now();
-}
-
-function chooseNextHost(room: Room) {
-  if (room.hostId) {
-    const current = room.participants.get(room.hostId);
-    if (current?.connected) {
-      return;
-    }
-  }
-
-  const next = [...room.participants.values()].find((participant) => participant.connected);
-  room.hostId = next?.id ?? null;
-}
-
-function toSerializableRoom(room: Room) {
-  chooseNextHost(room);
-  return {
-    roomId: room.roomId,
-    ticketTitle: room.ticketTitle,
-    phase: room.phase,
-    countdownValue: room.countdownValue,
-    participants: [...room.participants.values()]
-      .map(({ socket: _socket, ...participant }) => ({
-        ...participant,
-        isHost: participant.id === room.hostId
-      }))
-      .sort((a, b) => Number(b.connected) - Number(a.connected) || Number(b.isHost) - Number(a.isHost) || a.name.localeCompare(b.name)),
-    updatedAt: room.updatedAt
-  };
-}
-
-function broadcastRoom(room: Room) {
-  const state = toSerializableRoom(room);
-  for (const participant of room.participants.values()) {
-    if (participant.socket?.readyState === SOCKET_OPEN) {
-      participant.socket.send(
-        JSON.stringify({
-          type: "room_state",
-          state,
-          selfId: participant.id
-        })
-      );
-    }
-  }
-}
-
-function cleanupRoom(room: Room) {
-  const hasConnectedParticipant = [...room.participants.values()].some((participant) => participant.connected);
-  if (!hasConnectedParticipant) {
-    clearCountdown(room);
-    rooms.delete(room.roomId);
-  }
-}
-
-function isHost(room: Room, participant: Participant) {
-  chooseNextHost(room);
-  return room.hostId === participant.id;
-}
-
-function resetVotes(room: Room) {
-  for (const participant of room.participants.values()) {
-    participant.vote = null;
-  }
-}
-
-function startVoting(room: Room) {
-  clearCountdown(room);
-  resetVotes(room);
-  room.phase = "voting";
-  room.countdownValue = null;
-  markUpdated(room);
-  broadcastRoom(room);
-}
-
-function startRevealCountdown(room: Room) {
-  clearCountdown(room);
-  room.phase = "countdown";
-  room.countdownValue = 3;
-  markUpdated(room);
-  broadcastRoom(room);
-
-  const steps = [2, 1];
-  for (const [index, value] of steps.entries()) {
-    room.countdownTimers.push(
-      setTimeout(() => {
-        room.countdownValue = value;
-        markUpdated(room);
-        broadcastRoom(room);
-      }, (index + 1) * 600)
-    );
-  }
-
-  room.countdownTimers.push(
-    setTimeout(() => {
-      room.phase = "revealed";
-      room.countdownValue = null;
-      markUpdated(room);
-      broadcastRoom(room);
-      clearCountdown(room);
-    }, 1800)
-  );
-}
-
-function jsonResponse(body: unknown, init?: ResponseInit) {
+function json(body: unknown, init?: ResponseInit) {
   return new Response(JSON.stringify(body), {
     ...init,
     headers: {
@@ -222,204 +88,237 @@ function jsonResponse(body: unknown, init?: ResponseInit) {
   });
 }
 
-function textResponse(body: string, init?: ResponseInit) {
-  return new Response(body, {
-    ...init,
-    headers: {
-      "content-type": "text/plain; charset=utf-8",
-      ...(init?.headers ?? {})
-    }
-  });
+/* =========================
+  Durable Object: Room
+========================= */
+
+interface Participant {
+  id: string;
+  name: string;
+  vote: VoteChoice | null;
+  socket: WebSocket;
 }
 
-function createWebSocketResponse(request: Request) {
-  if (request.headers.get("Upgrade") !== "websocket") {
-    return textResponse("Expected WebSocket upgrade.", { status: 426, headers: { Upgrade: "websocket" } });
+interface RoomState {
+  roomId: string;
+  hostId: string | null;
+  ticketTitle: string;
+  phase: RoomPhase;
+  participants: Map<string, Participant>;
+}
+
+export class RoomDO {
+  private room: RoomState;
+
+  constructor(private state: DurableObjectState, private env: Env) {
+    const roomId = this.state.id.toString();
+    this.room = {
+      roomId,
+      hostId: null,
+      ticketTitle: "",
+      phase: "lobby",
+      participants: new Map()
+    };
   }
 
-  const pair = new WebSocketPair();
-  const clientSocket = pair[0];
-  const serverSocket = pair[1];
-  serverSocket.accept();
+  /* ---------- utilities ---------- */
 
-  let currentRoom: Room | null = null;
-  let currentParticipant: Participant | null = null;
-
-  const sendError = (message: string) => {
-    try {
-      serverSocket.send(JSON.stringify({ type: "error", message }));
-    } catch {
-      // Socket may already be closed; keep the Worker request alive.
-    }
-  };
-
-  serverSocket.addEventListener("message", (event) => {
-    if (typeof event.data !== "string") {
-      sendError("消息格式不正确。");
+  private chooseHost() {
+    if (this.room.hostId && this.room.participants.has(this.room.hostId)) {
       return;
     }
+    const first = [...this.room.participants.values()][0];
+    this.room.hostId = first?.id ?? null;
+  }
 
-    let message: ClientMessage;
+  private broadcast() {
+    const payload = {
+      type: "room_state",
+      state: {
+        roomId: this.room.roomId,
+        ticketTitle: this.room.ticketTitle,
+        phase: this.room.phase,
+        participants: [...this.room.participants.values()].map(p => ({
+          id: p.id,
+          name: p.name,
+          vote: p.vote,
+          isHost: p.id === this.room.hostId
+        }))
+      }
+    };
 
-    try {
-      message = JSON.parse(event.data) as ClientMessage;
-    } catch {
-      sendError("消息格式不正确。");
-      return;
+    const message = JSON.stringify(payload);
+
+    for (const participant of this.room.participants.values()) {
+      if (participant.socket.readyState === SOCKET_OPEN) {
+        participant.socket.send(message);
+      }
+    }
+  }
+
+  /* ---------- WebSocket handling ---------- */
+
+  private handleWebSocket(request: Request): Response {
+    if (request.headers.get("Upgrade") !== "websocket") {
+      return new Response("Expected WebSocket", { status: 426 });
     }
 
-    if (message.type === "join_room") {
-      if (!message.roomId) {
-        sendError("缺少房间号。");
+    const pair = new WebSocketPair();
+    const client = pair[0];
+    const server = pair[1];
+
+    server.accept();
+
+    let participant: Participant | null = null;
+
+    server.addEventListener("message", (event: MessageEvent) => {
+      if (typeof event.data !== "string") return;
+
+      let msg: ClientMessage;
+      try {
+        msg = JSON.parse(event.data);
+      } catch {
         return;
       }
 
-      const targetRoom = getRoom(message.roomId);
-      if (!targetRoom) {
-        sendError("房间不存在。");
+      if (msg.type === "join_room") {
+        participant = {
+          id: randomId(),
+          name: msg.name || "Anonymous",
+          vote: null,
+          socket: server
+        };
+        this.room.participants.set(participant.id, participant);
+        if (msg.claimHost && !this.room.hostId) {
+          this.room.hostId = participant.id;
+        }
+        this.chooseHost();
+        this.broadcast();
         return;
       }
 
-      currentRoom = targetRoom;
-      const participantId = randomId();
-      currentParticipant = {
-        id: participantId,
-        name: message.name?.trim() || "匿名成员",
-        vote: null,
-        connected: true,
-        socket: serverSocket
-      };
+      if (!participant) return;
 
-      currentRoom.participants.set(participantId, currentParticipant);
-      if (message.claimHost && !currentRoom.hostId) {
-        currentRoom.hostId = participantId;
+      switch (msg.type) {
+        case "set_name":
+          participant.name = msg.name || participant.name;
+          break;
+
+        case "set_ticket":
+          if (participant.id !== this.room.hostId) return;
+          this.room.ticketTitle = msg.ticketTitle || "";
+          break;
+
+        case "vote":
+          this.room.phase = "voting";
+          participant.vote = msg.vote || null;
+          break;
+
+        case "clear_vote":
+          participant.vote = null;
+          break;
+
+        case "start_round":
+          if (participant.id !== this.room.hostId) return;
+          this.room.phase = "voting";
+          for (const p of this.room.participants.values()) {
+            p.vote = null;
+          }
+          break;
+
+        case "reveal_votes":
+          if (participant.id !== this.room.hostId) return;
+          this.room.phase = "revealed";
+          break;
       }
 
-      chooseNextHost(currentRoom);
-      markUpdated(currentRoom);
-      broadcastRoom(currentRoom);
-      return;
-    }
+      this.broadcast();
+    });
 
-    if (!currentRoom || !currentParticipant) {
-      sendError("请先加入房间。");
-      return;
-    }
+    server.addEventListener("close", () => {
+      if (participant) {
+        this.room.participants.delete(participant.id);
+        this.chooseHost();
+        this.broadcast();
+      }
+    });
 
-    switch (message.type) {
-      case "set_name":
-        currentParticipant.name = message.name?.trim() || "匿名成员";
-        markUpdated(currentRoom);
-        broadcastRoom(currentRoom);
-        break;
-      case "set_ticket":
-        if (!isHost(currentRoom, currentParticipant)) {
-          sendError("只有主持人可以编辑议题。");
-          return;
-        }
-        currentRoom.ticketTitle = message.ticketTitle?.trim() || "";
-        markUpdated(currentRoom);
-        broadcastRoom(currentRoom);
-        break;
-      case "vote":
-        if (currentRoom.phase !== "voting" && currentRoom.phase !== "revealed") {
-          sendError("请等待主持人开启本轮投票。");
-          return;
-        }
-        currentParticipant.vote = message.vote ?? null;
-        if (currentRoom.phase === "revealed") {
-          currentRoom.phase = "voting";
-        }
-        markUpdated(currentRoom);
-        broadcastRoom(currentRoom);
-        break;
-      case "clear_vote":
-        currentParticipant.vote = null;
-        if (currentRoom.phase === "revealed") {
-          currentRoom.phase = "voting";
-        }
-        markUpdated(currentRoom);
-        broadcastRoom(currentRoom);
-        break;
-      case "start_round":
-        if (!isHost(currentRoom, currentParticipant)) {
-          sendError("只有主持人可以开启新一轮。");
-          return;
-        }
-        startVoting(currentRoom);
-        break;
-      case "reveal_votes":
-        if (!isHost(currentRoom, currentParticipant)) {
-          sendError("只有主持人可以翻牌。");
-          return;
-        }
-        if (![...currentRoom.participants.values()].some((participant) => participant.vote)) {
-          sendError("至少有一位成员投票后才能翻牌。");
-          return;
-        }
-        startRevealCountdown(currentRoom);
-        break;
-      default:
-        sendError("不支持的消息类型。");
-    }
-  });
-
-  serverSocket.addEventListener("close", () => {
-    if (currentRoom && currentParticipant) {
-      currentParticipant.connected = false;
-      currentParticipant.socket = null;
-      chooseNextHost(currentRoom);
-      markUpdated(currentRoom);
-      broadcastRoom(currentRoom);
-      cleanupRoom(currentRoom);
-    }
-  });
-
-  serverSocket.addEventListener("error", () => {
-    console.warn("Worker WebSocket error occurred.");
-  });
-
-  return new Response(null, {
-    status: 101,
-    webSocket: clientSocket
-  } as any);
-}
-
-async function handleApiRequest(request: Request, url: URL) {
-  if (request.method === "GET" && url.pathname === "/api/health") {
-    return jsonResponse({ ok: true });
+    return new Response(null, {
+      status: 101,
+      webSocket: client
+    } as any);
   }
 
-  if (url.pathname.startsWith("/api/rooms/")) {
-    const roomId = decodeURIComponent(url.pathname.slice("/api/rooms/".length));
-    if (!roomId) {
-      return jsonResponse({ error: "Missing room id" }, { status: 400 });
-    }
+  /* ---------- entry ---------- */
 
-    if (request.method === "PUT") {
-      const room = createRoomRecord(roomId);
-      return jsonResponse({ ok: true, roomId: room.roomId });
-    }
-
-    if (request.method === "GET") {
-      const room = getRoom(roomId);
-      return jsonResponse({ exists: Boolean(room) });
-    }
-
-    return jsonResponse({ error: "Method not allowed" }, { status: 405 });
-  }
-
-  return jsonResponse({ error: "Not found" }, { status: 404 });
-}
-
-export default {
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
 
     if (url.pathname === "/ws") {
-      return createWebSocketResponse(request);
+      return this.handleWebSocket(request);
     }
 
-    return handleApiRequest(request, url);
+    // Simple room existence / creation API
+    if (url.pathname.startsWith("/api/rooms/")) {
+      return json({ ok: true, roomId: this.room.roomId });
+    }
+
+    return new Response("Not found", { status: 404 });
+  }
+}
+
+/* =========================
+  Worker router
+========================= */
+
+function getRoomIdFromRequest(request: Request) {
+  const url = new URL(request.url);
+  const explicitRoomId = url.searchParams.get("room") ?? url.searchParams.get("roomId") ?? "";
+  if (explicitRoomId) {
+    return normalizeRoomId(explicitRoomId);
+  }
+
+  const ref = request.headers.get("referer") ?? request.headers.get("Referer");
+  if (!ref) return "";
+  try {
+    return normalizeRoomId(new URL(ref).searchParams.get("room") || "");
+  } catch {
+    return "";
+  }
+}
+
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const url = new URL(request.url);
+
+    /* ✅ WebSocket: forward ORIGINAL request */
+    if (url.pathname === "/ws") {
+      const roomId = getRoomIdFromRequest(request);
+      if (!roomId) {
+        return json({ error: "Missing room id" }, { status: 400 });
+      }
+
+      const id = env.ROOM_DO.idFromName(roomId);
+      const stub = env.ROOM_DO.get(id);
+
+      // ⭐ CRITICAL FIX — do NOT create new Request
+      return stub.fetch(request);
+    }
+
+    /* API */
+    if (url.pathname === "/api/health") {
+      return json({ ok: true });
+    }
+
+    if (url.pathname.startsWith("/api/rooms/")) {
+      const roomId = normalizeRoomId(url.pathname.split("/").pop() || "");
+      if (!roomId) {
+        return json({ error: "Missing room id" }, { status: 400 });
+      }
+      const id = env.ROOM_DO.idFromName(roomId);
+      return env.ROOM_DO.get(id).fetch(request);
+    }
+
+    return new Response("Not found", { status: 404 });
   }
 };

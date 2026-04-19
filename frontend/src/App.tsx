@@ -431,6 +431,7 @@ export function App() {
     setConnectionNotice("");
 
     const socketUrl = new URL("/ws", window.location.href);
+    socketUrl.searchParams.set("room", roomId);
     socketUrl.protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
 
     let socket: WebSocket;
