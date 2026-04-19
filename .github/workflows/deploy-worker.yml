@@ -16,10 +16,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
       - name: Deploy Cloudflare Worker
         uses: cloudflare/wrangler-action@v3
+        env:
+          WRANGLER_LOG: debug
         with:
           apiToken: ${{ secrets.CF_API_TOKEN }}
           workingDirectory: backend
-          command: deploy
