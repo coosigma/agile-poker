@@ -68,6 +68,59 @@ interface Env {
   Helpers
 ========================= */
 
+const CORS_ALLOWED_METHODS = "GET, POST, PUT, DELETE, OPTIONS";
+const CORS_ALLOWED_HEADERS = "Content-Type, Authorization";
+
+function getCorsOrigin(request: Request) {
+  const origin = request.headers.get("Origin") ?? request.headers.get("origin") ?? "";
+  if (!origin) {
+    return "";
+  }
+
+  try {
+    const url = new URL(origin);
+    if (url.protocol === "https:" && url.hostname.endsWith(".pages.dev")) {
+      return url.origin;
+    }
+  } catch {
+    return "";
+  }
+
+  return "";
+}
+
+function withCorsHeaders(request: Request, response: Response) {
+  const origin = getCorsOrigin(request);
+  if (!origin) {
+    return response;
+  }
+
+  const headers = new Headers(response.headers);
+  headers.set("Access-Control-Allow-Origin", origin);
+  headers.set("Access-Control-Allow-Methods", CORS_ALLOWED_METHODS);
+  headers.set("Access-Control-Allow-Headers", CORS_ALLOWED_HEADERS);
+  headers.append("Vary", "Origin");
+
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers
+  });
+}
+
+function corsPreflightResponse(request: Request) {
+  const origin = getCorsOrigin(request);
+  const headers = new Headers();
+  if (origin) {
+    headers.set("Access-Control-Allow-Origin", origin);
+    headers.set("Access-Control-Allow-Methods", CORS_ALLOWED_METHODS);
+    headers.set("Access-Control-Allow-Headers", CORS_ALLOWED_HEADERS);
+    headers.set("Vary", "Origin");
+  }
+
+  return new Response(null, { status: 204, headers });
+}
+
 const SOCKET_OPEN = 1;
 
 function randomId() {
@@ -331,6 +384,10 @@ export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
 
+    if (url.pathname.startsWith("/api") && request.method === "OPTIONS") {
+      return corsPreflightResponse(request);
+    }
+
     /* ✅ WebSocket: forward ORIGINAL request */
     if (url.pathname === "/ws") {
       const roomId = getRoomIdFromRequest(request);
@@ -347,16 +404,21 @@ export default {
 
     /* API */
     if (url.pathname === "/api/health") {
-      return json({ ok: true });
+      return withCorsHeaders(request, json({ ok: true }));
     }
 
     if (url.pathname.startsWith("/api/rooms/")) {
       const roomId = normalizeRoomId(url.pathname.split("/").pop() || "");
       if (!roomId) {
-        return json({ error: "Missing room id" }, { status: 400 });
+        return withCorsHeaders(request, json({ error: "Missing room id" }, { status: 400 }));
       }
       const id = env.ROOM_DO.idFromName(roomId);
-      return env.ROOM_DO.get(id).fetch(request);
+      const response = await env.ROOM_DO.get(id).fetch(request);
+      return withCorsHeaders(request, response);
+    }
+
+    if (url.pathname.startsWith("/api")) {
+      return withCorsHeaders(request, new Response("Not found", { status: 404 }));
     }
 
     return new Response("Not found", { status: 404 });
