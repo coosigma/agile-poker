@@ -148,7 +148,7 @@ export class RoomDO {
     }
 
     let suffix = 2;
-    while (takenNames.has(`${normalizedName} ${suffix}`)) {
+    while (takenNames.has(`${normalizedName}_${suffix}`)) {
       suffix += 1;
     }
 
