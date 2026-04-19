@@ -33,6 +33,7 @@ const STRINGS: Record<Language, Record<string, string>> = {
     joinRoomDesc: "Enter a room ID, then set your name.",
     languageLabel: "Language",
     languageHelp: "This preference stays on your device only.",
+    connectionWarning: "Live connection is unavailable. You can keep using the page.",
     socketNotReadyError: "The live connection is not ready yet. Please try again shortly.",
     createRoomError: "Failed to create the room. Please try again later.",
     enterRoomIdError: "Please enter a room ID.",
@@ -109,6 +110,7 @@ const STRINGS: Record<Language, Record<string, string>> = {
     joinRoomDesc: "输入房间 ID，校验成功后再填写昵称进入。",
     languageLabel: "语言",
     languageHelp: "该偏好只保存在当前设备上。",
+    connectionWarning: "实时连接暂时不可用，你仍然可以继续使用页面。",
     socketNotReadyError: "实时连接尚未准备好，请稍后再试。",
     createRoomError: "创建房间失败，请稍后再试。",
     enterRoomIdError: "请输入房间 ID。",
@@ -185,6 +187,7 @@ const STRINGS: Record<Language, Record<string, string>> = {
     joinRoomDesc: "部屋 ID を入力し、存在確認のあとで表示名を設定します。",
     languageLabel: "言語",
     languageHelp: "この設定はこの端末のみに保存されます。",
+    connectionWarning: "リアルタイム接続は利用できません。ページはそのまま使えます。",
     socketNotReadyError: "リアルタイム接続はまだ準備できていません。しばらくしてから再試行してください。",
     createRoomError: "部屋の作成に失敗しました。後でもう一度お試しください。",
     enterRoomIdError: "部屋 ID を入力してください。",
@@ -405,6 +408,7 @@ export function App() {
   const [modifier, setModifier] = useState<VoteModifier>("base");
   const [language, setLanguage] = useState<Language>(getInitialLanguage);
   const [socketStatus, setSocketStatus] = useState<"connecting" | "open" | "closed">("closed");
+  const [connectionNotice, setConnectionNotice] = useState("");
   const [error, setError] = useState("");
   const socketRef = useRef<WebSocket | null>(null);
 
@@ -424,11 +428,26 @@ export function App() {
     }
 
     setSocketStatus("connecting");
-    const socket = new WebSocket(`${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}/ws`);
+    setConnectionNotice("");
+
+    const socketUrl = new URL("/ws", window.location.href);
+    socketUrl.protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+
+    let socket: WebSocket;
+    try {
+      socket = new WebSocket(socketUrl.toString());
+    } catch {
+      console.warn("WebSocket connection could not be created.");
+      setSocketStatus("closed");
+      setConnectionNotice(copy.connectionWarning);
+      return;
+    }
+
     socketRef.current = socket;
 
     socket.addEventListener("open", () => {
       setSocketStatus("open");
+      setConnectionNotice("");
       const intent = getRoomIntent(roomId);
       socket.send(
         JSON.stringify({
@@ -451,6 +470,12 @@ export function App() {
       setTicketDraft(message.state.ticketTitle);
       setError("");
       clearRoomIntent();
+    });
+
+    socket.addEventListener("error", () => {
+      console.warn("WebSocket connection failed or was interrupted.");
+      setSocketStatus("closed");
+      setConnectionNotice(copy.connectionWarning);
     });
 
     socket.addEventListener("close", () => {
@@ -692,6 +717,7 @@ export function App() {
           </button>
         </div>
       </section>
+      {connectionNotice ? <p className="error-text center-text">{connectionNotice}</p> : null}
 
       <section className="room-layout">
         <aside className="side-panel">
