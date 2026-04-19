@@ -1,4 +1,5 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { buildApiUrl, buildRoomWebSocketUrl } from "./config";
 import {
   MODIFIER_OPTIONS,
   NUMERIC_CARD_VALUES,
@@ -430,13 +431,11 @@ export function App() {
     setSocketStatus("connecting");
     setConnectionNotice("");
 
-    const socketUrl = new URL("/ws", window.location.href);
-    socketUrl.searchParams.set("room", roomId);
-    socketUrl.protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const socketUrl = buildRoomWebSocketUrl(roomId);
 
     let socket: WebSocket;
     try {
-      socket = new WebSocket(socketUrl.toString());
+      socket = new WebSocket(socketUrl);
     } catch {
       console.warn("WebSocket connection could not be created.");
       setSocketStatus("closed");
@@ -541,7 +540,7 @@ export function App() {
 
   const handleCreateRoom = async () => {
     const nextRoomId = randomRoomId();
-    const response = await fetch(`/api/rooms/${nextRoomId}`, { method: "PUT" });
+    const response = await fetch(buildApiUrl(`/rooms/${nextRoomId}`), { method: "PUT" });
     if (!response.ok) {
       setError(copy.createRoomError);
       return;
@@ -561,7 +560,7 @@ export function App() {
       return;
     }
 
-    const response = await fetch(`/api/rooms/${normalizedRoomId}`);
+    const response = await fetch(buildApiUrl(`/rooms/${normalizedRoomId}`));
     if (!response.ok) {
       setError(copy.verifyRoomError);
       return;
