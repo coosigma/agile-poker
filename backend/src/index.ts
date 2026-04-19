@@ -262,7 +262,20 @@ export class RoomDO {
 
     // Simple room existence / creation API
     if (url.pathname.startsWith("/api/rooms/")) {
-      return json({ ok: true, roomId: this.room.roomId });
+      const roomId = normalizeRoomId(url.pathname.split("/").pop() || "");
+      if (!roomId) {
+        return json({ error: "Missing room id" }, { status: 400 });
+      }
+
+      if (request.method === "PUT") {
+        this.room.roomId = roomId;
+        if (!this.room.hostId) {
+          this.room.hostId = null;
+        }
+        return json({ exists: true, roomId });
+      }
+
+      return json({ exists: true, roomId });
     }
 
     return new Response("Not found", { status: 404 });
