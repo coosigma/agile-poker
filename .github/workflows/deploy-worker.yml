@@ -22,5 +22,6 @@ jobs:
           WRANGLER_LOG: debug
         with:
           apiToken: ${{ secrets.CF_API_TOKEN }}
+          wranglerVersion: "4"
           workingDirectory: backend
-          command: deploy src/index.ts
+          command: deploy
