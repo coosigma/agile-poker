@@ -397,7 +397,7 @@ function roomShareUrl(roomId: string) {
 
 export function App() {
   const initialRoomId = getRoomIdFromUrl();
-  const [screen, setScreen] = useState<Screen>(initialRoomId ? "name-entry" : "home");
+  const [screen, setScreen] = useState<Screen>(initialRoomId && getInitialName() ? "room" : initialRoomId ? "name-entry" : "home");
   const [roomId, setRoomId] = useState(initialRoomId);
   const [name, setName] = useState(getInitialName);
   const [nameDraft, setNameDraft] = useState(getInitialName);
@@ -584,6 +584,11 @@ export function App() {
     const nextName = nameDraft.trim() || "匿名成员";
     setName(nextName);
     setError("");
+    if (roomId) {
+      updateRoomInUrl(roomId);
+      window.location.replace(roomShareUrl(roomId));
+      return;
+    }
     setScreen("room");
   };
 

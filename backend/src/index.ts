@@ -132,27 +132,29 @@ export class RoomDO {
   }
 
   private broadcast() {
-    const payload = {
-      type: "room_state",
-      state: {
-        roomId: this.room.roomId,
-        ticketTitle: this.room.ticketTitle,
-        phase: this.room.phase,
-        participants: [...this.room.participants.values()].map(p => ({
-          id: p.id,
-          name: p.name,
-          vote: p.vote,
-          isHost: p.id === this.room.hostId
-        }))
-      }
-    };
-
-    const message = JSON.stringify(payload);
-
     for (const participant of this.room.participants.values()) {
-      if (participant.socket.readyState === SOCKET_OPEN) {
-        participant.socket.send(message);
+      if (participant.socket.readyState !== SOCKET_OPEN) {
+        continue;
       }
+
+      const payload = {
+        type: "room_state",
+        state: {
+          roomId: this.room.roomId,
+          ticketTitle: this.room.ticketTitle,
+          phase: this.room.phase,
+          participants: [...this.room.participants.values()].map((p) => ({
+            id: p.id,
+            name: p.name,
+            vote: p.vote,
+            connected: true,
+            isHost: p.id === this.room.hostId
+          }))
+        },
+        selfId: participant.id
+      };
+
+      participant.socket.send(JSON.stringify(payload));
     }
   }
 
