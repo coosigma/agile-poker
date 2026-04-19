@@ -88,6 +88,10 @@ function json(body: unknown, init?: ResponseInit) {
   });
 }
 
+function normalizeParticipantName(name: string) {
+  return name.trim() || "Anonymous";
+}
+
 /* =========================
   Durable Object: Room
 ========================= */
@@ -129,6 +133,26 @@ export class RoomDO {
     }
     const first = [...this.room.participants.values()][0];
     this.room.hostId = first?.id ?? null;
+  }
+
+  private makeUniqueParticipantName(desiredName: string, excludeParticipantId?: string) {
+    const normalizedName = normalizeParticipantName(desiredName);
+    const takenNames = new Set(
+      [...this.room.participants.values()]
+        .filter((participant) => participant.id !== excludeParticipantId)
+        .map((participant) => participant.name)
+    );
+
+    if (!takenNames.has(normalizedName)) {
+      return normalizedName;
+    }
+
+    let suffix = 2;
+    while (takenNames.has(`${normalizedName} ${suffix}`)) {
+      suffix += 1;
+    }
+
+    return `${normalizedName} ${suffix}`;
   }
 
   private broadcast() {
@@ -184,9 +208,10 @@ export class RoomDO {
       }
 
       if (msg.type === "join_room") {
+        const name = this.makeUniqueParticipantName(msg.name || "Anonymous");
         participant = {
           id: randomId(),
-          name: msg.name || "Anonymous",
+          name,
           vote: null,
           socket: server
         };
@@ -203,7 +228,7 @@ export class RoomDO {
 
       switch (msg.type) {
         case "set_name":
-          participant.name = msg.name || participant.name;
+          participant.name = this.makeUniqueParticipantName(msg.name || participant.name, participant.id);
           break;
 
         case "set_ticket":
