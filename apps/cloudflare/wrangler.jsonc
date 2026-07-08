@@ -1,6 +1,6 @@
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "agile-poker",
+	"name": "agile-poker-backend",
 	"main": "src/index.ts",
 	"compatibility_date": "2026-06-30",
 	"compatibility_flags": ["nodejs_compat"],

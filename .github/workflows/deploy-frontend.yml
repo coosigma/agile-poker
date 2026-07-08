@@ -25,6 +25,8 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @agile-poker/frontend build
+        env:
+          VITE_WORKER_ORIGIN: ${{ vars.VITE_WORKER_ORIGIN }}
       - uses: cloudflare/pages-action@v1
         with:
           apiToken: ${{ secrets.CF_API_TOKEN }}
