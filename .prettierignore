@@ -1,0 +1,11 @@
+# Vendored / generated / build artifacts — not ours to format
+node_modules
+dist
+.next
+build
+coverage
+pnpm-lock.yaml
+**/mockServiceWorker.js
+test-results
+playwright-report
+tests/sdd/generated

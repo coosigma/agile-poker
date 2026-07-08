@@ -1,0 +1,28 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "agile-poker",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-06-30",
+	"compatibility_flags": ["nodejs_compat"],
+	"observability": {
+		"enabled": true,
+	},
+	"upload_source_maps": true,
+	"vars": {
+		"APP_NAME": "agile-poker",
+	},
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "ROOM_DO",
+				"class_name": "RoomDO",
+			},
+		],
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": ["RoomDO"],
+		},
+	],
+}

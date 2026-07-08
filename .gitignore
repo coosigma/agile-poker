@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+dist-server/
+*.tsbuildinfo
+apps/frontend/dist/
+
+# Cloudflare / Wrangler
+.wrangler/
+apps/cloudflare/.wrangler/
+
+# Playwright / test artifacts
+playwright-report/
+test-results/
+
+# Local runtime data (self-hosted SQLite + object store)
+data/
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# OS / editor noise
+.DS_Store

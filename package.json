@@ -1,0 +1,63 @@
+{
+	"name": "agile-poker",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"packageManager": "pnpm@10.34.4",
+	"scripts": {
+		"dev:cf": "pnpm --filter @agile-poker/cloudflare dev",
+		"dev:local": "pnpm --filter @agile-poker/self-hosted dev",
+		"build": "pnpm --filter @agile-poker/app-core build && pnpm --filter @agile-poker/cloudflare build && pnpm --filter @agile-poker/self-hosted build && pnpm --filter @agile-poker/frontend build",
+		"typecheck": "pnpm -r typecheck",
+		"lint": "eslint .",
+		"format:check": "prettier --check .",
+		"format:fix": "prettier --write .",
+		"test": "pnpm -r test",
+		"test:int": "vitest run --config vitest.int.config.ts --passWithNoTests",
+		"test:e2e": "playwright test",
+		"test:smoke": "playwright test --project=smoke",
+		"test:story": "playwright test --project=story",
+		"test:layout": "playwright test --project=layout",
+		"test:story:gen": "node tests/sdd/lib/generate-all.mts",
+		"test:story:headed": "PW_SLOWMO=600 playwright test --project=story --headed --workers=1",
+		"test:story:ui": "playwright test --project=story --ui",
+		"verify": "pnpm typecheck && pnpm lint && pnpm format:check && pnpm test && pnpm test:int && pnpm build",
+		"verify:ci": "pnpm verify && pnpm test:smoke",
+		"verify:local": "pnpm verify && pnpm test:smoke && pnpm test:story",
+		"deploy:cf": "pnpm --filter @agile-poker/cloudflare deploy",
+		"start:self-hosted": "pnpm --filter @agile-poker/self-hosted start",
+		"dev:frontend": "pnpm --filter @agile-poker/frontend dev",
+		"build:frontend": "pnpm --filter @agile-poker/frontend build",
+		"prepare": "husky"
+	},
+	"lint-staged": {
+		"*.{ts,tsx,mts,cts,mjs,cjs,js,jsx}": [
+			"eslint --fix",
+			"prettier --write"
+		],
+		"*.{json,jsonc,css,md,yml,yaml}": [
+			"prettier --write"
+		]
+	},
+	"devDependencies": {
+		"@eslint/js": "^9.39.1",
+		"@playwright/test": "^1.61.0",
+		"@types/node": "^26.0.0",
+		"@xstate/graph": "^3.0.4",
+		"eslint": "^9.39.1",
+		"eslint-plugin-react-hooks": "^7.1.1",
+		"eslint-plugin-react-refresh": "^0.5.3",
+		"globals": "^16.5.0",
+		"husky": "^9.1.7",
+		"lint-staged": "^17.0.8",
+		"prettier": "3.9.4",
+		"typescript": "^6.0.3",
+		"typescript-eslint": "^8.46.0",
+		"vitest": "^4.1.9",
+		"xstate": "^5.32.2"
+	},
+	"engines": {
+		"node": ">=22",
+		"pnpm": ">=10"
+	}
+}

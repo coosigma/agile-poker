@@ -1,0 +1,154 @@
+.playground-shell {
+	display: grid;
+	grid-template-columns: 300px 1fr;
+	min-height: 100vh;
+	align-items: start;
+}
+
+.playground-sidebar {
+	position: sticky;
+	top: 0;
+	align-self: start;
+	height: 100vh;
+	overflow-y: auto;
+	padding: 1.5rem 1.25rem;
+	border-right: 1px solid rgba(148, 163, 184, 0.25);
+	background: rgba(15, 23, 42, 0.03);
+}
+
+.playground-title {
+	margin: 0 0 0.5rem;
+	font-size: 1.1rem;
+}
+
+.playground-hint {
+	margin: 0 0 1.25rem;
+	font-size: 0.85rem;
+	line-height: 1.4;
+	opacity: 0.8;
+}
+
+.playground-scenarios {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.playground-scenario {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+	width: 100%;
+	text-align: left;
+	padding: 0.65rem 0.75rem;
+	border: 1px solid rgba(148, 163, 184, 0.35);
+	border-radius: 0.6rem;
+	background: transparent;
+	cursor: pointer;
+}
+
+.playground-scenario.is-active {
+	border-color: #6366f1;
+	background: rgba(99, 102, 241, 0.12);
+}
+
+.playground-scenario-label {
+	font-weight: 600;
+	font-size: 0.9rem;
+}
+
+.playground-scenario-desc {
+	font-size: 0.78rem;
+	line-height: 1.35;
+	opacity: 0.75;
+}
+
+.playground-stage {
+	padding: 1.5rem;
+}
+
+.playground-simulate {
+	margin-top: 1.5rem;
+	padding-top: 1.25rem;
+	border-top: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.playground-simulate-title {
+	margin: 0 0 0.5rem;
+	font-size: 0.95rem;
+}
+
+.playground-simulate-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+	margin-bottom: 0.65rem;
+}
+
+.playground-sim-button {
+	flex: 1 1 auto;
+	padding: 0.5rem 0.7rem;
+	border: 1px solid #6366f1;
+	border-radius: 0.55rem;
+	background: rgba(99, 102, 241, 0.14);
+	color: inherit;
+	font-size: 0.82rem;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.playground-sim-button.is-ghost {
+	border-color: rgba(148, 163, 184, 0.45);
+	background: transparent;
+}
+
+.playground-sim-button:disabled {
+	opacity: 0.45;
+	cursor: not-allowed;
+}
+
+.playground-simulate-count {
+	margin: 0 0 0.6rem;
+	font-size: 0.8rem;
+	opacity: 0.8;
+}
+
+.playground-sim-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.35rem;
+	max-height: 40vh;
+	overflow-y: auto;
+}
+
+.playground-sim-item {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem;
+	padding: 0.35rem 0.55rem;
+	border: 1px solid rgba(148, 163, 184, 0.3);
+	border-radius: 0.5rem;
+	font-size: 0.82rem;
+}
+
+.playground-sim-remove {
+	border: none;
+	background: transparent;
+	color: inherit;
+	font-size: 1.1rem;
+	line-height: 1;
+	cursor: pointer;
+	opacity: 0.7;
+	padding: 0 0.2rem;
+}
+
+.playground-sim-remove:hover {
+	opacity: 1;
+}
