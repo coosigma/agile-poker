@@ -371,7 +371,11 @@ input {
 }
 
 .modifier-header strong {
-	font-size: 0.96rem;
+	font-size: 0.72rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.14em;
+	color: var(--text-muted);
 }
 
 .info-tip {
@@ -501,6 +505,10 @@ input {
 	align-items: center;
 	justify-content: space-between;
 	gap: 12px;
+}
+
+.panel-header h3 {
+	font-size: 1rem;
 }
 
 .status-pill,

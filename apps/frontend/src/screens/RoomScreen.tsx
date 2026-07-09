@@ -138,9 +138,7 @@ export function RoomScreen({
 					<p className="eyebrow">
 						{copy.roomLabel} {roomId}
 					</p>
-					<h2 className="room-title">
-						{state?.ticketTitle || copy.waitingTopic}
-					</h2>
+					<h2 className="room-title">{copy.appTitle}</h2>
 				</div>
 				<div className="topbar-actions">
 					<LanguageSelector
