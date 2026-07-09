@@ -71,8 +71,7 @@ button:disabled {
 
 .landing-stage,
 .compact-card,
-.panel,
-.topbar {
+.panel {
 	background: var(--panel-bg);
 	border: 1px solid var(--panel-border);
 	border-radius: 28px;
@@ -491,7 +490,7 @@ input {
 	align-items: center;
 	justify-content: space-between;
 	gap: 16px;
-	padding: 16px 18px;
+	padding: 8px 18px;
 	margin-bottom: 0;
 }
 
