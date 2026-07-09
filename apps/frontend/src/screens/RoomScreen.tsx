@@ -351,7 +351,7 @@ export function RoomScreen({
 									className={`control-pad-center ${pendingControl ? 'pending' : ''}`}
 									type="button"
 									disabled={!pendingControl}
-									aria-label={confirmPrompt ?? copy.confirmAction}
+									aria-label={copy.confirmAction}
 									title={confirmPrompt ?? undefined}
 									onClick={handleConfirmControl}
 								>
