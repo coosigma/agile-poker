@@ -3,7 +3,8 @@ import {
 	joinByRoomCode,
 	revealButton,
 	roleBadge,
-	startNewRoundButton,
+	startRoundButton,
+	resetRoundButton,
 } from '../utils/app';
 import type { UseCase } from './context';
 
@@ -31,7 +32,8 @@ export const ucJoinByCode: UseCase = {
 		await expect(roleBadge(ctx.teammate)).toHaveText('Member');
 
 		// Host controls are not available to the teammate.
-		await expect(startNewRoundButton(ctx.teammate)).toBeHidden();
+		await expect(startRoundButton(ctx.teammate)).toBeHidden();
+		await expect(resetRoundButton(ctx.teammate)).toBeHidden();
 		await expect(revealButton(ctx.teammate)).toBeHidden();
 	},
 };

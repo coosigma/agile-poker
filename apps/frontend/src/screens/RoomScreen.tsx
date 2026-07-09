@@ -206,6 +206,13 @@ export function RoomScreen({
 		...seatLayouts[index],
 	}));
 
+	const confirmPrompt =
+		pendingControl === 'reset'
+			? copy.resetRoundConfirm
+			: pendingControl === 'done'
+				? copy.doneTicketConfirm
+				: null;
+
 	return (
 		<div className="app-shell room-shell">
 			<section className="topbar">
@@ -344,7 +351,8 @@ export function RoomScreen({
 									className={`control-pad-center ${pendingControl ? 'pending' : ''}`}
 									type="button"
 									disabled={!pendingControl}
-									aria-label={copy.confirmAction}
+									aria-label={confirmPrompt ?? copy.confirmAction}
+									title={confirmPrompt ?? undefined}
 									onClick={handleConfirmControl}
 								>
 									{pendingControl ? 'OK?' : copy.confirmAction}

@@ -65,8 +65,12 @@ export function numericCard(page: Page, value: string): Locator {
 	});
 }
 
-export function startNewRoundButton(page: Page): Locator {
-	return page.getByRole('button', { name: /^(Start|Reset)$/ });
+export function startRoundButton(page: Page): Locator {
+	return page.getByRole('button', { name: 'Start', exact: true });
+}
+
+export function resetRoundButton(page: Page): Locator {
+	return page.getByRole('button', { name: 'Reset', exact: true });
 }
 
 export function revealButton(page: Page): Locator {

@@ -74,7 +74,7 @@ function CompactLanguageSelector({
 				type="button"
 				className="language-menu-button"
 				aria-label={copy.languageLabel}
-				aria-haspopup="listbox"
+				aria-haspopup="menu"
 				aria-expanded={open}
 				onClick={() => setOpen((value) => !value)}
 			>
@@ -110,13 +110,13 @@ function CompactLanguageSelector({
 				</svg>
 			</button>
 			{open ? (
-				<ul className="language-menu-list" role="listbox">
+				<ul className="language-menu-list" role="menu">
 					{LANGUAGE_OPTIONS.map((option) => (
-						<li key={option.value}>
+						<li key={option.value} role="none">
 							<button
 								type="button"
-								role="option"
-								aria-selected={option.value === language}
+								role="menuitemradio"
+								aria-checked={option.value === language}
 								className={`language-menu-item ${option.value === language ? 'active' : ''}`}
 								onClick={() => {
 									setLanguage(option.value);

@@ -2,7 +2,8 @@ import {
 	expect,
 	numericCard,
 	revealButton,
-	startNewRoundButton,
+	startRoundButton,
+	resetRoundButton,
 } from '../../utils/app';
 import type { UseCase } from '../context';
 
@@ -21,7 +22,8 @@ export const ucMemberCannotControl: UseCase = {
 	from: 'bothInRoom',
 	to: 'bothInRoom',
 	async run(ctx) {
-		await expect(startNewRoundButton(ctx.teammate)).toBeHidden();
+		await expect(startRoundButton(ctx.teammate)).toBeHidden();
+		await expect(resetRoundButton(ctx.teammate)).toBeHidden();
 		await expect(revealButton(ctx.teammate)).toBeHidden();
 		// Voting has not been opened by the host, so cards are inert for the member.
 		await expect(
