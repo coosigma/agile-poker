@@ -82,45 +82,43 @@ export function RoomScreen({
 	).length;
 
 	const stats = useMemo(() => {
-		if (state?.phase !== 'revealed') {
-			return null;
-		}
-
-		const buckets = new Map<string, number>();
+		const revealed = state?.phase === 'revealed';
 		const numericVotes: number[] = [];
-		const totalVotes = participants.filter(
-			(participant) => participant.vote,
-		).length;
+		let totalVotes = 0;
 
-		for (const participant of participants) {
-			const label = voteLabel(participant.vote, language);
-			if (participant.vote) {
-				buckets.set(label, (buckets.get(label) ?? 0) + 1);
-			}
-			const numericValue = voteNumericValue(participant.vote);
-			if (numericValue !== null) {
-				numericVotes.push(numericValue);
+		if (revealed) {
+			for (const participant of participants) {
+				if (participant.vote) {
+					totalVotes += 1;
+				}
+				const numericValue = voteNumericValue(participant.vote);
+				if (numericValue !== null) {
+					numericVotes.push(numericValue);
+				}
 			}
 		}
+
+		const mean =
+			numericVotes.length > 0
+				? numericVotes.reduce((sum, value) => sum + value, 0) /
+					numericVotes.length
+				: 0;
+
+		const stdDev =
+			numericVotes.length > 0
+				? Math.sqrt(
+						numericVotes.reduce((sum, value) => sum + (value - mean) ** 2, 0) /
+							numericVotes.length,
+					)
+				: 0;
 
 		return {
-			average:
-				numericVotes.length > 0
-					? (
-							numericVotes.reduce((sum, value) => sum + value, 0) /
-							numericVotes.length
-						).toFixed(2)
-					: 'N/A',
+			revealed,
 			totalVotes,
-			breakdown: [...buckets.entries()]
-				.map(([label, count]) => ({
-					label,
-					count,
-					ratio: totalVotes > 0 ? ((count / totalVotes) * 100).toFixed(0) : '0',
-				}))
-				.sort((a, b) => b.count - a.count || a.label.localeCompare(b.label)),
+			mean: numericVotes.length > 0 ? mean.toFixed(1) : '0',
+			stdDev: numericVotes.length > 0 ? stdDev.toFixed(1) : '0',
 		};
-	}, [language, participants, state?.phase]);
+	}, [participants, state?.phase]);
 
 	const handleTicketSubmit = (event: FormEvent) => {
 		event.preventDefault();
@@ -263,32 +261,22 @@ export function RoomScreen({
 							<div className="table-center">
 								<p>{copy.revealTable}</p>
 								<strong>{state?.ticketTitle || copy.waitingTopic}</strong>
-								{stats ? (
-									<div className="table-stats">
-										<div className="table-stats-highlights">
-											<div>
-												<span>{copy.overallAverage}</span>
-												<strong>{stats.average}</strong>
-											</div>
-											<div>
-												<span>{copy.validVotes}</span>
-												<strong>{stats.totalVotes}</strong>
-											</div>
-										</div>
-										{stats.breakdown.length > 0 ? (
-											<div className="table-stats-breakdown">
-												{stats.breakdown.map((item) => (
-													<div key={item.label} className="table-stats-chip">
-														<strong>{item.label}</strong>
-														<span>
-															{item.count} {copy.voteUnit} · {item.ratio}%
-														</span>
-													</div>
-												))}
-											</div>
-										) : null}
+								<div
+									className={`scoreboard ${stats.revealed ? 'revealed' : 'pending'}`}
+								>
+									<div className="scoreboard-cell">
+										<span className="scoreboard-value">{stats.totalVotes}</span>
+										<span className="scoreboard-label">{copy.statVotes}</span>
 									</div>
-								) : null}
+									<div className="scoreboard-cell">
+										<span className="scoreboard-value">{stats.mean}</span>
+										<span className="scoreboard-label">{copy.statMean}</span>
+									</div>
+									<div className="scoreboard-cell">
+										<span className="scoreboard-value">{stats.stdDev}</span>
+										<span className="scoreboard-label">{copy.statStdDev}</span>
+									</div>
+								</div>
 							</div>
 						</div>
 						{seats.map(({ participant, left, top, scale }) => (

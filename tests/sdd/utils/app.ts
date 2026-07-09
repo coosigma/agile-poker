@@ -50,12 +50,12 @@ export function votedCount(page: Page): Locator {
 		.locator('strong');
 }
 
-/** The revealed overall arithmetic average value. */
+/** The revealed mean (average) value on the scoreboard. */
 export function averageValue(page: Page): Locator {
 	return page
-		.locator('.table-stats-highlights > div')
-		.filter({ hasText: 'Overall arithmetic average' })
-		.locator('strong');
+		.locator('.scoreboard-cell')
+		.filter({ hasText: 'Mean' })
+		.locator('.scoreboard-value');
 }
 
 /** A numeric vote card by its face value, e.g. `numericCard(page, '3')`. */
