@@ -67,7 +67,7 @@ export const STRINGS: Record<Language, Record<string, string>> = {
 		startRound: 'Start new round',
 		reveal: 'Reveal',
 		revealTable: 'Scrum Poker Table',
-		waitingTopic: 'Waiting for the ticket',
+		waitingTopic: 'No ticket yet',
 		statVotes: 'Votes',
 		statMean: 'Mean',
 		statStdDev: 'Std dev',
