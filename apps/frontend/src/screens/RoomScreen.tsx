@@ -135,10 +135,8 @@ export function RoomScreen({
 		<div className="app-shell room-shell">
 			<section className="topbar">
 				<div>
-					<p className="eyebrow">
-						{copy.roomLabel} {roomId}
-					</p>
-					<h2 className="room-title">{copy.appTitle}</h2>
+					<p className="eyebrow">{copy.roomLabel}</p>
+					<h2 className="room-title">{roomId}</h2>
 				</div>
 				<div className="topbar-actions">
 					<LanguageSelector
@@ -216,6 +214,7 @@ export function RoomScreen({
 										value={ticketDraft}
 										onChange={(event) => setTicketDraft(event.target.value)}
 										placeholder={copy.ticketPlaceholder}
+										maxLength={40}
 									/>
 								</label>
 								<button className="secondary-button" type="submit">
@@ -258,7 +257,13 @@ export function RoomScreen({
 						<div className="ellipse-table">
 							<div className="table-center">
 								<p>{copy.revealTable}</p>
-								<strong>{state?.ticketTitle || copy.waitingTopic}</strong>
+								<strong
+									style={{
+										fontSize: `clamp(1rem, ${Math.min(2.2, 40 / Math.max((state?.ticketTitle || copy.waitingTopic).length, 1))}rem, 2.2rem)`,
+									}}
+								>
+									{state?.ticketTitle || copy.waitingTopic}
+								</strong>
 								<div
 									className={`scoreboard ${stats.revealed ? 'revealed' : 'pending'}`}
 								>

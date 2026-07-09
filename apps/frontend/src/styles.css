@@ -71,8 +71,7 @@ button:disabled {
 
 .landing-stage,
 .compact-card,
-.panel,
-.topbar {
+.panel {
 	background: var(--panel-bg);
 	border: 1px solid var(--panel-border);
 	border-radius: 28px;
@@ -491,7 +490,7 @@ input {
 	align-items: center;
 	justify-content: space-between;
 	gap: 16px;
-	padding: 16px 18px;
+	padding: 8px 18px;
 	margin-bottom: 0;
 }
 
@@ -661,8 +660,11 @@ input {
 .table-center > strong {
 	display: block;
 	margin: 0 auto;
-	max-width: 16ch;
-	font-size: clamp(1.6rem, 2vw, 2.6rem);
+	max-width: 100%;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	font-size: clamp(1.3rem, 1.8vw, 2.2rem);
 }
 
 .scoreboard {

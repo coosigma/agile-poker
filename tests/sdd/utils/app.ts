@@ -73,9 +73,9 @@ export function revealButton(page: Page): Locator {
 	return page.getByRole('button', { name: 'Reveal', exact: true });
 }
 
-/** The room's code shown in the room topbar, e.g. "Room ABC123". */
+/** The room's code shown in the room topbar heading, e.g. "ABC123". */
 export function roomCodeLabel(page: Page): Locator {
-	return page.locator('.topbar .eyebrow');
+	return page.locator('.topbar .room-title');
 }
 
 // --- flows ---------------------------------------------------------------
