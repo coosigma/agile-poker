@@ -85,14 +85,26 @@ function CompactLanguageSelector({
 					aria-hidden="true"
 					focusable="false"
 				>
-					<path
+					<text
+						x="2"
+						y="11"
 						fill="currentColor"
-						d="M11 3H4a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h1.2l-.6 3.2L8.5 15H11a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2Zm-.5 8.2c-.9-.3-1.6-.7-2.3-1.2.8-1 1.3-2 1.5-3.2h.9V5.6H7.9V4.5H6.7v1.1H3.9v1.2h4.4c-.2.9-.6 1.6-1.1 2.3-.4-.5-.7-1-.9-1.5H5.1c.3.8.7 1.6 1.3 2.2-.7.5-1.4.8-2.2 1.1l.4 1.1c1-.3 1.8-.7 2.6-1.3.7.6 1.6 1 2.5 1.4l.4-1.1Z"
-					/>
-					<path
+						fontSize="12"
+						fontWeight="600"
+						dominantBaseline="central"
+					>
+						文
+					</text>
+					<text
+						x="11"
+						y="19"
 						fill="currentColor"
-						d="M15.8 8h1.6l3 8h-1.6l-.7-2h-3l-.7 2H13l2.8-8Zm.8 1.9-1 2.7h2l-1-2.7Z"
-					/>
+						fontSize="12"
+						fontWeight="700"
+						dominantBaseline="central"
+					>
+						A
+					</text>
 				</svg>
 			</button>
 			{open ? (
