@@ -10,6 +10,8 @@ import { forceEnglish } from '../utils/app';
 export interface StoryState {
 	roomId?: string;
 	inviteUrl?: string;
+	/** The ticket the host sets before opening the first round. */
+	readonly ticket: string;
 	/** Host and teammate deliberately vote different estimates (→ a meaningful average). */
 	readonly hostVote: string;
 	readonly teammateVote: string;
@@ -63,6 +65,7 @@ export async function createStoryContext(
 		hostContext,
 		teammateContext,
 		state: {
+			ticket: 'PROJ-42',
 			hostVote: '3',
 			teammateVote: '5',
 			hostName: 'Alice',

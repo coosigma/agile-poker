@@ -16,7 +16,7 @@ export const ucRevealVotes: UseCase = {
 		const expectedAverage = (
 			(Number(ctx.state.hostVote) + Number(ctx.state.teammateVote)) /
 			2
-		).toFixed(2);
+		).toFixed(1);
 		await clickReveal(ctx.host);
 		await expect(averageValue(ctx.host)).toHaveText(expectedAverage);
 		await expect(averageValue(ctx.teammate)).toHaveText(expectedAverage);

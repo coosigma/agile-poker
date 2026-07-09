@@ -17,7 +17,7 @@ describe('voteLabel', () => {
 
 	test('renders special cards verbatim', () => {
 		expect(voteLabel({ kind: 'special', value: '?' })).toBe('?');
-		expect(voteLabel({ kind: 'special', value: '☕' })).toBe('☕');
+		expect(voteLabel({ kind: 'special', value: '∞' })).toBe('∞');
 	});
 });
 
@@ -90,7 +90,7 @@ describe('computeRevealStats', () => {
 
 	test('reports N/A when no numeric votes are present', () => {
 		const stats = computeRevealStats([
-			participant('a', { kind: 'special', value: '☕' }),
+			participant('a', { kind: 'special', value: '∞' }),
 		]);
 		expect(stats.average).toBe('N/A');
 		expect(stats.totalVotes).toBe(1);

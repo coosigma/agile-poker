@@ -5,7 +5,7 @@ import {
 } from './types.js';
 
 /**
- * Language-neutral label for a cast vote, e.g. `5♭`, `13♯`, `?`, `☕`.
+ * Language-neutral label for a cast vote, e.g. `5♭`, `13♯`, `?`, `∞`.
  * The "not voted" fallback is a presentation concern and is handled by the UI.
  */
 export function voteLabel(vote: VoteChoice): string {
@@ -20,7 +20,7 @@ export function voteLabel(vote: VoteChoice): string {
 /**
  * Numeric value used for the arithmetic average. `flat`/`sharp` modifiers nudge
  * the estimate half-way toward the neighbouring Fibonacci card. Special cards
- * (`?`, `☕`) contribute no numeric value.
+ * (`?`, `∞`) contribute no numeric value.
  */
 export function voteNumericValue(vote: VoteChoice | null): number | null {
 	if (!vote || vote.kind !== 'estimate') {

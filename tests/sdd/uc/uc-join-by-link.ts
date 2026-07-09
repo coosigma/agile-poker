@@ -3,7 +3,8 @@ import {
 	joinByInviteLink,
 	revealButton,
 	roleBadge,
-	startNewRoundButton,
+	startRoundButton,
+	resetRoundButton,
 } from '../utils/app';
 import type { UseCase } from './context';
 
@@ -11,7 +12,7 @@ import type { UseCase } from './context';
 export const ucJoinByLink: UseCase = {
 	id: 'joinByLink',
 	description:
-		'A teammate opens the invite link, joins the same room as Member, and sees host controls as read-only.',
+		'A teammate opens the invite link, joins the same room as Member, and does not see host controls.',
 	from: 'linkShared',
 	to: 'bothInRoom',
 	async run(ctx) {
@@ -30,8 +31,9 @@ export const ucJoinByLink: UseCase = {
 		);
 		await expect(roleBadge(ctx.teammate)).toHaveText('Member');
 
-		// Host controls are read-only for the teammate.
-		await expect(startNewRoundButton(ctx.teammate)).toBeDisabled();
-		await expect(revealButton(ctx.teammate)).toBeDisabled();
+		// Host controls are not available to the teammate.
+		await expect(startRoundButton(ctx.teammate)).toBeHidden();
+		await expect(resetRoundButton(ctx.teammate)).toBeHidden();
+		await expect(revealButton(ctx.teammate)).toBeHidden();
 	},
 };

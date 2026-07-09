@@ -50,12 +50,12 @@ export function votedCount(page: Page): Locator {
 		.locator('strong');
 }
 
-/** The revealed overall arithmetic average value. */
+/** The revealed mean (average) value on the scoreboard. */
 export function averageValue(page: Page): Locator {
 	return page
-		.locator('.stats-highlight')
-		.filter({ hasText: 'Overall arithmetic average' })
-		.locator('strong');
+		.locator('.scoreboard-cell')
+		.filter({ hasText: 'Mean' })
+		.locator('.scoreboard-value');
 }
 
 /** A numeric vote card by its face value, e.g. `numericCard(page, '3')`. */
@@ -65,17 +65,25 @@ export function numericCard(page: Page, value: string): Locator {
 	});
 }
 
-export function startNewRoundButton(page: Page): Locator {
-	return page.getByRole('button', { name: 'Start new round' });
+export function startRoundButton(page: Page): Locator {
+	return page.getByRole('button', { name: 'Start', exact: true });
+}
+
+export function resetRoundButton(page: Page): Locator {
+	return page.getByRole('button', { name: 'Reset', exact: true });
 }
 
 export function revealButton(page: Page): Locator {
 	return page.getByRole('button', { name: 'Reveal', exact: true });
 }
 
-/** The room's code shown in the room topbar, e.g. "Room ABC123". */
+export function confirmControlButton(page: Page): Locator {
+	return page.getByRole('button', { name: 'OK', exact: true });
+}
+
+/** The room's code shown in the room topbar heading, e.g. "ABC123". */
 export function roomCodeLabel(page: Page): Locator {
-	return page.locator('.topbar .eyebrow');
+	return page.locator('.topbar .room-title');
 }
 
 // --- flows ---------------------------------------------------------------
@@ -178,9 +186,37 @@ export async function attemptJoinByRoomCode(
 	return (await error.count()) > 0 ? (await error.innerText()).trim() : '';
 }
 
-/** Host clicks "Start new round" (opens voting, or resets after a reveal). */
+/** Host types a ticket id and saves it (required before the first round can start). */
+export async function setTicket(page: Page, ticket: string): Promise<void> {
+	await page.getByLabel('Current ticket', { exact: true }).fill(ticket);
+	await page
+		.getByRole('button', { name: 'Update ticket', exact: true })
+		.click();
+}
+
+/**
+ * The control pad renders Start/Reset/Reveal/Done as wedge-shaped buttons that
+ * each fill the 184px circle and are clipped into a quadrant. Their geometric
+ * centre lands in the pad's hollow hub (covered by the OK button), so a default
+ * centre-click misses the wedge. Click the visible arc of each wedge instead.
+ */
+const CONTROL_PAD_WEDGE = {
+	start: { x: 92, y: 45 },
+	reset: { x: 45, y: 92 },
+	reveal: { x: 140, y: 92 },
+} as const;
+
+/** Host clicks "Start" for a lobby round, or "Reset" for a voted round. */
 export async function clickStartRound(page: Page): Promise<void> {
-	await startNewRoundButton(page).click();
+	const resetButton = page.getByRole('button', { name: 'Reset', exact: true });
+	if (await resetButton.isEnabled()) {
+		await resetButton.click({ position: CONTROL_PAD_WEDGE.reset });
+		await confirmControlButton(page).click();
+		return;
+	}
+	await page
+		.getByRole('button', { name: 'Start', exact: true })
+		.click({ position: CONTROL_PAD_WEDGE.start });
 }
 
 /** Cast a numeric estimate with the default (base) modifier. */
@@ -193,7 +229,8 @@ export async function castNumericVote(
 
 /** Host reveals the votes. */
 export async function clickReveal(page: Page): Promise<void> {
-	await revealButton(page).click();
+	await revealButton(page).click({ position: CONTROL_PAD_WEDGE.reveal });
+	await confirmControlButton(page).click();
 }
 
 export { expect };
