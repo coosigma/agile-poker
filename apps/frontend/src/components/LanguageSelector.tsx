@@ -86,21 +86,23 @@ function CompactLanguageSelector({
 					focusable="false"
 				>
 					<text
-						x="2"
-						y="11"
+						x="8"
+						y="8"
 						fill="currentColor"
-						fontSize="12"
+						fontSize="11"
 						fontWeight="600"
+						textAnchor="middle"
 						dominantBaseline="central"
 					>
 						文
 					</text>
 					<text
-						x="11"
-						y="19"
+						x="16"
+						y="16"
 						fill="currentColor"
-						fontSize="12"
+						fontSize="11"
 						fontWeight="700"
+						textAnchor="middle"
 						dominantBaseline="central"
 					>
 						A
