@@ -6,6 +6,7 @@ import {
 	useRef,
 	useState,
 } from 'react';
+import { InfoTip } from '../components/InfoTip';
 import { LanguageSelector } from '../components/LanguageSelector';
 import { useRoomSocket } from '../hooks/useRoomSocket';
 import { STRINGS, formatText, type Language } from '../lib/i18n';
@@ -81,45 +82,43 @@ export function RoomScreen({
 	).length;
 
 	const stats = useMemo(() => {
-		if (state?.phase !== 'revealed') {
-			return null;
-		}
-
-		const buckets = new Map<string, number>();
+		const revealed = state?.phase === 'revealed';
 		const numericVotes: number[] = [];
-		const totalVotes = participants.filter(
-			(participant) => participant.vote,
-		).length;
+		let totalVotes = 0;
 
-		for (const participant of participants) {
-			const label = voteLabel(participant.vote, language);
-			if (participant.vote) {
-				buckets.set(label, (buckets.get(label) ?? 0) + 1);
-			}
-			const numericValue = voteNumericValue(participant.vote);
-			if (numericValue !== null) {
-				numericVotes.push(numericValue);
+		if (revealed) {
+			for (const participant of participants) {
+				if (participant.vote) {
+					totalVotes += 1;
+				}
+				const numericValue = voteNumericValue(participant.vote);
+				if (numericValue !== null) {
+					numericVotes.push(numericValue);
+				}
 			}
 		}
+
+		const mean =
+			numericVotes.length > 0
+				? numericVotes.reduce((sum, value) => sum + value, 0) /
+					numericVotes.length
+				: 0;
+
+		const stdDev =
+			numericVotes.length > 0
+				? Math.sqrt(
+						numericVotes.reduce((sum, value) => sum + (value - mean) ** 2, 0) /
+							numericVotes.length,
+					)
+				: 0;
 
 		return {
-			average:
-				numericVotes.length > 0
-					? (
-							numericVotes.reduce((sum, value) => sum + value, 0) /
-							numericVotes.length
-						).toFixed(2)
-					: 'N/A',
+			revealed,
 			totalVotes,
-			breakdown: [...buckets.entries()]
-				.map(([label, count]) => ({
-					label,
-					count,
-					ratio: totalVotes > 0 ? ((count / totalVotes) * 100).toFixed(0) : '0',
-				}))
-				.sort((a, b) => b.count - a.count || a.label.localeCompare(b.label)),
+			mean: numericVotes.length > 0 ? mean.toFixed(1) : '0',
+			stdDev: numericVotes.length > 0 ? stdDev.toFixed(1) : '0',
 		};
-	}, [language, participants, state?.phase]);
+	}, [participants, state?.phase]);
 
 	const handleTicketSubmit = (event: FormEvent) => {
 		event.preventDefault();
@@ -136,15 +135,15 @@ export function RoomScreen({
 		<div className="app-shell room-shell">
 			<section className="topbar">
 				<div>
-					<p className="eyebrow">
-						{copy.roomLabel} {roomId}
-					</p>
-					<h2 className="room-title">
-						{state?.ticketTitle || copy.waitingTopic}
-					</h2>
+					<p className="eyebrow">{copy.roomLabel}</p>
+					<h2 className="room-title">{roomId}</h2>
 				</div>
 				<div className="topbar-actions">
-					<LanguageSelector language={language} setLanguage={setLanguage} />
+					<LanguageSelector
+						language={language}
+						setLanguage={setLanguage}
+						compact
+					/>
 					<div className="status-pill">
 						<span className={`status-dot ${socketStatus}`}></span>
 						<span>
@@ -202,50 +201,45 @@ export function RoomScreen({
 						</div>
 					</div>
 
-					<div className="panel">
-						<div className="panel-header">
-							<h3>{copy.hostControls}</h3>
-							<span className="badge muted-badge">
-								{isHost ? copy.ready : copy.readOnly}
-							</span>
+					{isHost ? (
+						<div className="panel">
+							<div className="panel-header">
+								<h3>{copy.hostControls}</h3>
+								<span className="badge muted-badge">{copy.ready}</span>
+							</div>
+							<form className="stack" onSubmit={handleTicketSubmit}>
+								<label>
+									{copy.currentTicket}
+									<input
+										value={ticketDraft}
+										onChange={(event) => setTicketDraft(event.target.value)}
+										placeholder={copy.ticketPlaceholder}
+										maxLength={40}
+									/>
+								</label>
+								<button className="secondary-button" type="submit">
+									{copy.updateTicket}
+								</button>
+							</form>
+							<div className="stack">
+								<button
+									className="primary-button"
+									type="button"
+									onClick={() => sendMessage({ type: 'start_round' })}
+								>
+									{copy.startRound}
+								</button>
+								<button
+									className="secondary-button"
+									type="button"
+									disabled={votedCount === 0}
+									onClick={() => sendMessage({ type: 'reveal_votes' })}
+								>
+									{copy.reveal}
+								</button>
+							</div>
 						</div>
-						<form className="stack" onSubmit={handleTicketSubmit}>
-							<label>
-								{copy.currentTicket}
-								<input
-									disabled={!isHost}
-									value={ticketDraft}
-									onChange={(event) => setTicketDraft(event.target.value)}
-									placeholder={copy.ticketPlaceholder}
-								/>
-							</label>
-							<button
-								className="secondary-button"
-								type="submit"
-								disabled={!isHost}
-							>
-								{copy.updateTicket}
-							</button>
-						</form>
-						<div className="stack">
-							<button
-								className="primary-button"
-								type="button"
-								disabled={!isHost}
-								onClick={() => sendMessage({ type: 'start_round' })}
-							>
-								{copy.startRound}
-							</button>
-							<button
-								className="secondary-button"
-								type="button"
-								disabled={!isHost || votedCount === 0}
-								onClick={() => sendMessage({ type: 'reveal_votes' })}
-							>
-								{copy.reveal}
-							</button>
-						</div>
-					</div>
+					) : null}
 				</aside>
 
 				<main className="table-zone">
@@ -263,7 +257,29 @@ export function RoomScreen({
 						<div className="ellipse-table">
 							<div className="table-center">
 								<p>{copy.revealTable}</p>
-								<strong>{state?.ticketTitle || copy.waitingTopic}</strong>
+								<strong
+									style={{
+										fontSize: `clamp(1rem, ${Math.min(2.2, 40 / Math.max((state?.ticketTitle || copy.waitingTopic).length, 1))}rem, 2.2rem)`,
+									}}
+								>
+									{state?.ticketTitle || copy.waitingTopic}
+								</strong>
+								<div
+									className={`scoreboard ${stats.revealed ? 'revealed' : 'pending'}`}
+								>
+									<div className="scoreboard-cell">
+										<span className="scoreboard-value">{stats.totalVotes}</span>
+										<span className="scoreboard-label">{copy.statVotes}</span>
+									</div>
+									<div className="scoreboard-cell">
+										<span className="scoreboard-value">{stats.mean}</span>
+										<span className="scoreboard-label">{copy.statMean}</span>
+									</div>
+									<div className="scoreboard-cell">
+										<span className="scoreboard-value">{stats.stdDev}</span>
+										<span className="scoreboard-label">{copy.statStdDev}</span>
+									</div>
+								</div>
 							</div>
 						</div>
 						{seats.map(({ participant, left, top, scale }) => (
@@ -295,42 +311,6 @@ export function RoomScreen({
 							</article>
 						))}
 					</div>
-
-					<div className="panel table-results-panel">
-						<div className="panel-header">
-							<h3>{copy.tableStats}</h3>
-							<span className="badge">
-								{state?.phase === 'revealed'
-									? copy.statsReady
-									: copy.statsWaiting}
-							</span>
-						</div>
-						{stats ? (
-							<div className="results-grid">
-								<div className="stats-highlight">
-									<span>{copy.overallAverage}</span>
-									<strong>{stats.average}</strong>
-								</div>
-								<div className="stats-highlight">
-									<span>{copy.validVotes}</span>
-									<strong>{stats.totalVotes}</strong>
-								</div>
-								<div className="breakdown-strip">
-									{stats.breakdown.map((item) => (
-										<div key={item.label} className="breakdown-item">
-											<span>{item.label}</span>
-											<strong>
-												{item.count} {copy.voteUnit}
-											</strong>
-											<small>{item.ratio}%</small>
-										</div>
-									))}
-								</div>
-							</div>
-						) : (
-							<div className="empty-state">{copy.afterRevealStats}</div>
-						)}
-					</div>
 				</main>
 
 				<aside className="side-panel">
@@ -340,6 +320,37 @@ export function RoomScreen({
 							<span className="badge muted-badge">
 								{voteLabel(self?.vote ?? null, language)}
 							</span>
+						</div>
+						<div className="modifier-section">
+							<div className="modifier-header">
+								<strong>{copy.optionalModifier}</strong>
+								<InfoTip
+									label={copy.optionalModifier}
+									text={copy.optionalModifierHelp}
+								/>
+							</div>
+							<div className="modifier-row">
+								{MODIFIER_OPTIONS.map((option) => (
+									<button
+										key={option}
+										type="button"
+										className={`modifier-button ${modifier === option ? 'active' : ''}`}
+										aria-label={
+											option === 'flat'
+												? copy.modifierFlat
+												: option === 'sharp'
+													? copy.modifierSharp
+													: copy.modifierBase
+										}
+										onClick={() => setModifier(option)}
+									>
+										{option === 'flat' ? '♭' : option === 'sharp' ? '♯' : '♮'}
+									</button>
+								))}
+							</div>
+						</div>
+						<div className="points-header">
+							<strong>{copy.pointsTitle}</strong>
 						</div>
 						<div className="card-grid">
 							{NUMERIC_CARD_VALUES.map((value) => {
@@ -367,13 +378,9 @@ export function RoomScreen({
 										}
 									>
 										<span>{value}</span>
-										<small>
-											{modifier === 'flat'
-												? '♭'
-												: modifier === 'sharp'
-													? '♯'
-													: '·'}
-										</small>
+										{modifier !== 'base' ? (
+											<small>{modifier === 'flat' ? '♭' : '♯'}</small>
+										) : null}
 									</button>
 								);
 							})}
@@ -404,28 +411,6 @@ export function RoomScreen({
 									</button>
 								);
 							})}
-						</div>
-						<div className="modifier-section">
-							<div className="modifier-copy">
-								<strong>{copy.optionalModifier}</strong>
-								<p>{copy.optionalModifierHelp}</p>
-							</div>
-							<div className="modifier-row">
-								{MODIFIER_OPTIONS.map((option) => (
-									<button
-										key={option}
-										type="button"
-										className={`modifier-button ${modifier === option ? 'active' : ''}`}
-										onClick={() => setModifier(option)}
-									>
-										{option === 'flat'
-											? copy.modifierFlat
-											: option === 'sharp'
-												? copy.modifierSharp
-												: copy.modifierBase}
-									</button>
-								))}
-							</div>
 						</div>
 						<button
 							className="vote-card clear-card"
