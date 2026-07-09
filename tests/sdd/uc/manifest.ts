@@ -31,7 +31,7 @@ export const ucManifest: readonly UseCaseManifestEntry[] = [
 		from: 'linkShared',
 		to: 'bothInRoom',
 		description:
-			'A teammate opens the invite link, joins the same room as Member, and sees host controls as read-only.',
+			'A teammate opens the invite link, joins the same room as Member, and does not see host controls.',
 	},
 	{
 		id: 'startRound',

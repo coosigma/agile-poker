@@ -53,7 +53,7 @@ export function votedCount(page: Page): Locator {
 /** The revealed overall arithmetic average value. */
 export function averageValue(page: Page): Locator {
 	return page
-		.locator('.stats-highlight')
+		.locator('.table-stats-highlights > div')
 		.filter({ hasText: 'Overall arithmetic average' })
 		.locator('strong');
 }

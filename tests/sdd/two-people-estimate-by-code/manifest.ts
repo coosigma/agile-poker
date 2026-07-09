@@ -33,7 +33,7 @@ const doorSpecific: readonly UseCaseManifestEntry[] = [
 		from: 'codeShared',
 		to: 'bothInRoom',
 		description:
-			'A teammate joins by typing the room code, lands in the same room as Member, and sees host controls as read-only.',
+			'A teammate joins by typing the room code, lands in the same room as Member, and does not see host controls.',
 	},
 ];
 

@@ -61,7 +61,6 @@ export const STRINGS: Record<Language, Record<string, string>> = {
 		member: 'Member',
 		hostControls: 'Host controls',
 		ready: 'Editable',
-		readOnly: 'Read only',
 		currentTicket: 'Current ticket',
 		ticketPlaceholder: 'For example: PAY-1842 fix refund flow',
 		updateTicket: 'Update ticket',
@@ -79,6 +78,7 @@ export const STRINGS: Record<Language, Record<string, string>> = {
 		afterRevealStats:
 			'After revealing, you will see the arithmetic average and the frequency of each value.',
 		voteCards: 'Vote cards',
+		pointsTitle: 'Points',
 		optionalModifier: 'Optional modifier',
 		optionalModifierHelp:
 			'If your estimate sits between two numbers, choose a modifier to mark it as slightly lower or higher without reaching the next size.',
@@ -142,7 +142,6 @@ export const STRINGS: Record<Language, Record<string, string>> = {
 		member: '成员',
 		hostControls: '主持人控制',
 		ready: '可操作',
-		readOnly: '只读',
 		currentTicket: '当前议题',
 		ticketPlaceholder: '例如：PAY-1842 修复退款流程',
 		updateTicket: '更新议题',
@@ -159,6 +158,7 @@ export const STRINGS: Record<Language, Record<string, string>> = {
 		voteUnit: '票',
 		afterRevealStats: '翻牌后会展示全局算术平均和所有出现值的频率分布。',
 		voteCards: '投票卡',
+		pointsTitle: '点数',
 		optionalModifier: '可选升降号',
 		optionalModifierHelp:
 			'如果介乎两个数字之间，可以选择升降号表示比所选数字多或少，但不足以达到相邻 size。',
@@ -226,7 +226,6 @@ export const STRINGS: Record<Language, Record<string, string>> = {
 		member: 'メンバー',
 		hostControls: 'ホスト操作',
 		ready: '編集可',
-		readOnly: '閲覧のみ',
 		currentTicket: '現在のチケット',
 		ticketPlaceholder: '例: PAY-1842 返金フローを修正',
 		updateTicket: 'チケットを更新',
@@ -243,6 +242,7 @@ export const STRINGS: Record<Language, Record<string, string>> = {
 		voteUnit: '票',
 		afterRevealStats: '公開後に、算術平均と各値の出現頻度を表示します。',
 		voteCards: '投票カード',
+		pointsTitle: 'ポイント',
 		optionalModifier: '任意の修飾',
 		optionalModifierHelp:
 			'2つの数字の間くらいなら、隣のサイズに届かない少し小さい・大きいを示すために修飾を選べます。',
