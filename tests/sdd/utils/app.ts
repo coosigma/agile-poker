@@ -50,12 +50,12 @@ export function votedCount(page: Page): Locator {
 		.locator('strong');
 }
 
-/** The revealed overall arithmetic average value. */
+/** The revealed mean (average) value on the scoreboard. */
 export function averageValue(page: Page): Locator {
 	return page
-		.locator('.stats-highlight')
-		.filter({ hasText: 'Overall arithmetic average' })
-		.locator('strong');
+		.locator('.scoreboard-cell')
+		.filter({ hasText: 'Mean' })
+		.locator('.scoreboard-value');
 }
 
 /** A numeric vote card by its face value, e.g. `numericCard(page, '3')`. */
@@ -73,9 +73,9 @@ export function revealButton(page: Page): Locator {
 	return page.getByRole('button', { name: 'Reveal', exact: true });
 }
 
-/** The room's code shown in the room topbar, e.g. "Room ABC123". */
+/** The room's code shown in the room topbar heading, e.g. "ABC123". */
 export function roomCodeLabel(page: Page): Locator {
-	return page.locator('.topbar .eyebrow');
+	return page.locator('.topbar .room-title');
 }
 
 // --- flows ---------------------------------------------------------------
