@@ -2,7 +2,6 @@ import {
 	type CSSProperties,
 	type FormEvent,
 	useEffect,
-	useMemo,
 	useRef,
 	useState,
 } from 'react';
@@ -10,12 +9,12 @@ import { InfoTip } from '../components/InfoTip';
 import { LanguageSelector } from '../components/LanguageSelector';
 import { useRoomSocket } from '../hooks/useRoomSocket';
 import { STRINGS, formatText, type Language } from '../lib/i18n';
+import { computeScoreboardStats } from '../lib/scoreboard';
 import {
 	getPhaseLabel,
 	layoutSeats,
 	roomShareUrl,
 	voteLabel,
-	voteNumericValue,
 } from '../lib/poker';
 import {
 	MODIFIER_OPTIONS,
@@ -81,7 +80,7 @@ export function RoomScreen({
 		(participant) => participant.connected,
 	).length;
 	const votedCount = participants.filter(
-		(participant) => participant.vote,
+		(participant) => participant.hasVoted,
 	).length;
 	const savedTicketTitle = state?.ticketTitle ?? '';
 	const ticketDraftValue = ticketDraft.trim();
@@ -99,44 +98,7 @@ export function RoomScreen({
 	const canDoneTicket =
 		hasSavedTicket && !hasUnsavedTicketChange && state?.phase === 'revealed';
 
-	const stats = useMemo(() => {
-		const revealed = state?.phase === 'revealed';
-		const numericVotes: number[] = [];
-		let totalVotes = 0;
-
-		if (revealed) {
-			for (const participant of participants) {
-				if (participant.vote) {
-					totalVotes += 1;
-				}
-				const numericValue = voteNumericValue(participant.vote);
-				if (numericValue !== null) {
-					numericVotes.push(numericValue);
-				}
-			}
-		}
-
-		const mean =
-			numericVotes.length > 0
-				? numericVotes.reduce((sum, value) => sum + value, 0) /
-					numericVotes.length
-				: 0;
-
-		const stdDev =
-			numericVotes.length > 0
-				? Math.sqrt(
-						numericVotes.reduce((sum, value) => sum + (value - mean) ** 2, 0) /
-							numericVotes.length,
-					)
-				: 0;
-
-		return {
-			revealed,
-			totalVotes,
-			mean: numericVotes.length > 0 ? mean.toFixed(1) : '0',
-			stdDev: numericVotes.length > 0 ? stdDev.toFixed(1) : '0',
-		};
-	}, [participants, state?.phase]);
+	const stats = computeScoreboardStats(participants, state?.phase);
 
 	useEffect(() => {
 		if (
@@ -437,7 +399,7 @@ export function RoomScreen({
 								<strong>
 									{state?.phase === 'revealed'
 										? voteLabel(participant.vote, language)
-										: participant.vote
+										: participant.hasVoted
 											? copy.votedYes
 											: copy.voteNotCast}
 								</strong>

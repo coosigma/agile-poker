@@ -40,7 +40,7 @@ function newRoom(id: string): RoomDO {
 
 function roster(
 	socket: MockServerSocket,
-): { name: string; isHost: boolean; vote: unknown }[] {
+): { name: string; isHost: boolean; vote: unknown; hasVoted: boolean }[] {
 	const frame = socket.lastFrame();
 	if (!frame || frame.type !== 'room_state') {
 		throw new Error(
@@ -48,7 +48,12 @@ function roster(
 		);
 	}
 	const state = frame.state as {
-		participants: { name: string; isHost: boolean; vote: unknown }[];
+		participants: {
+			name: string;
+			isHost: boolean;
+			vote: unknown;
+			hasVoted: boolean;
+		}[];
 	};
 	return state.participants;
 }
@@ -149,6 +154,67 @@ describe('RoomDO boundary paths', () => {
 					.sort(),
 			).toEqual(['Ada', 'Bob', 'Cy']);
 		}
+	});
+
+	it('redacts other participants raw votes before reveal', async () => {
+		const room = newRoom('room-redact');
+		const host = await connect(room);
+		const guest = await connect(room);
+
+		await host.message(
+			JSON.stringify({
+				type: 'join_room',
+				roomId: 'room-redact',
+				name: 'Ada',
+				claimHost: true,
+			}),
+		);
+		await guest.message(
+			JSON.stringify({ type: 'join_room', roomId: 'room-redact', name: 'Bob' }),
+		);
+		await host.message(
+			JSON.stringify({
+				type: 'vote',
+				vote: { kind: 'estimate', base: '5', modifier: 'base' },
+			}),
+		);
+		await guest.message(
+			JSON.stringify({
+				type: 'vote',
+				vote: { kind: 'estimate', base: '8', modifier: 'base' },
+			}),
+		);
+
+		const hostRoster = roster(host);
+		const guestRoster = roster(guest);
+
+		expect(hostRoster).toEqual([
+			expect.objectContaining({
+				name: 'Ada',
+				vote: { kind: 'estimate', base: '5', modifier: 'base' },
+				hasVoted: true,
+			}),
+			expect.objectContaining({ name: 'Bob', vote: null, hasVoted: true }),
+		]);
+		expect(guestRoster).toEqual([
+			expect.objectContaining({ name: 'Ada', vote: null, hasVoted: true }),
+			expect.objectContaining({
+				name: 'Bob',
+				vote: { kind: 'estimate', base: '8', modifier: 'base' },
+				hasVoted: true,
+			}),
+		]);
+
+		await host.message(JSON.stringify({ type: 'reveal_votes' }));
+
+		expect(roster(host).map((participant) => participant.vote)).toEqual([
+			{ kind: 'estimate', base: '5', modifier: 'base' },
+			{ kind: 'estimate', base: '8', modifier: 'base' },
+		]);
+		expect(roster(guest).map((participant) => participant.vote)).toEqual([
+			{ kind: 'estimate', base: '5', modifier: 'base' },
+			{ kind: 'estimate', base: '8', modifier: 'base' },
+		]);
 	});
 
 	it('ignores a message received before join_room', async () => {

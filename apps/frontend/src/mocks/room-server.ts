@@ -15,6 +15,7 @@ import {
 	applyClientMessage,
 	createRoomState,
 	leaveRoom,
+	redactRoomStateViewForParticipant,
 	toRoomStateView,
 	type ClientMessage,
 	type RoomState,
@@ -148,7 +149,11 @@ export class MockRoomServer {
 	private broadcast(): void {
 		const view = toRoomStateView(this.state);
 		for (const [id, emit] of this.live) {
-			emit({ type: 'room_state', state: view, selfId: id });
+			emit({
+				type: 'room_state',
+				state: redactRoomStateViewForParticipant(view, id),
+				selfId: id,
+			});
 		}
 	}
 }

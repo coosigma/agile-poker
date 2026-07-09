@@ -1,6 +1,7 @@
 import {
 	createRoomState,
 	normalizeRoomId,
+	redactRoomStateViewForParticipant,
 	type RoomStateView,
 } from '@agile-poker/app-core/poker';
 import {
@@ -68,7 +69,7 @@ export class RoomDO implements DurableObject {
 			socket.send(
 				JSON.stringify({
 					type: 'room_state',
-					state: view,
+					state: redactRoomStateViewForParticipant(view, participantId),
 					selfId: participantId,
 				}),
 			);

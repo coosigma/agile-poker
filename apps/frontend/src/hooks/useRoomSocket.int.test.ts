@@ -24,7 +24,14 @@ function makeRoomState(overrides: Partial<RoomState> = {}): RoomState {
 		ticketTitle: '',
 		countdownValue: null,
 		participants: [
-			{ id: 's1', name: 'Ada', vote: null, connected: true, isHost: true },
+			{
+				id: 's1',
+				name: 'Ada',
+				vote: null,
+				hasVoted: false,
+				connected: true,
+				isHost: true,
+			},
 		],
 		...overrides,
 	};

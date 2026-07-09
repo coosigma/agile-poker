@@ -64,6 +64,7 @@ export interface ParticipantView {
 	readonly id: string;
 	readonly name: string;
 	readonly vote: VoteChoice | null;
+	readonly hasVoted: boolean;
 	readonly connected: boolean;
 	readonly isHost: boolean;
 }
