@@ -66,11 +66,15 @@ export function numericCard(page: Page, value: string): Locator {
 }
 
 export function startNewRoundButton(page: Page): Locator {
-	return page.getByRole('button', { name: 'Start new round' });
+	return page.getByRole('button', { name: /^(Start|Reset)$/ });
 }
 
 export function revealButton(page: Page): Locator {
 	return page.getByRole('button', { name: 'Reveal', exact: true });
+}
+
+export function confirmControlButton(page: Page): Locator {
+	return page.getByRole('button', { name: 'OK', exact: true });
 }
 
 /** The room's code shown in the room topbar heading, e.g. "ABC123". */
@@ -178,9 +182,15 @@ export async function attemptJoinByRoomCode(
 	return (await error.count()) > 0 ? (await error.innerText()).trim() : '';
 }
 
-/** Host clicks "Start new round" (opens voting, or resets after a reveal). */
+/** Host clicks "Start" for a lobby round, or "Reset" for a voted round. */
 export async function clickStartRound(page: Page): Promise<void> {
-	await startNewRoundButton(page).click();
+	const resetButton = page.getByRole('button', { name: 'Reset', exact: true });
+	if (await resetButton.isEnabled()) {
+		await resetButton.click();
+		await confirmControlButton(page).click();
+		return;
+	}
+	await page.getByRole('button', { name: 'Start', exact: true }).click();
 }
 
 /** Cast a numeric estimate with the default (base) modifier. */
@@ -194,6 +204,7 @@ export async function castNumericVote(
 /** Host reveals the votes. */
 export async function clickReveal(page: Page): Promise<void> {
 	await revealButton(page).click();
+	await confirmControlButton(page).click();
 }
 
 export { expect };

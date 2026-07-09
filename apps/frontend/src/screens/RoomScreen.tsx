@@ -43,6 +43,9 @@ export function RoomScreen({
 
 	const [ticketDraft, setTicketDraft] = useState('');
 	const [modifier, setModifier] = useState<VoteModifier>('base');
+	const [pendingControl, setPendingControl] = useState<
+		'reset' | 'reveal' | 'done' | null
+	>(null);
 
 	// Seats are distributed by pixel arc length, which needs the table frame's
 	// aspect ratio (width / height). Measure it and keep it current on resize.
@@ -80,6 +83,21 @@ export function RoomScreen({
 	const votedCount = participants.filter(
 		(participant) => participant.vote,
 	).length;
+	const savedTicketTitle = state?.ticketTitle ?? '';
+	const ticketDraftValue = ticketDraft.trim();
+	const hasUnsavedTicketChange = ticketDraftValue !== savedTicketTitle;
+	const hasSavedTicket = Boolean(savedTicketTitle.trim());
+	const canUpdateTicket = Boolean(state) && hasUnsavedTicketChange;
+	const canStartRound =
+		Boolean(state) && state?.phase === 'lobby' && Boolean(ticketDraftValue);
+	const canResetRound =
+		Boolean(state) &&
+		!hasUnsavedTicketChange &&
+		state?.phase !== 'lobby' &&
+		votedCount > 0;
+	const canRevealVotes = votedCount > 0;
+	const canDoneTicket =
+		hasSavedTicket && !hasUnsavedTicketChange && state?.phase === 'revealed';
 
 	const stats = useMemo(() => {
 		const revealed = state?.phase === 'revealed';
@@ -120,9 +138,66 @@ export function RoomScreen({
 		};
 	}, [participants, state?.phase]);
 
+	useEffect(() => {
+		if (
+			(pendingControl === 'reset' && !canResetRound) ||
+			(pendingControl === 'reveal' && !canRevealVotes) ||
+			(pendingControl === 'done' && !canDoneTicket)
+		) {
+			setPendingControl(null);
+		}
+	}, [canDoneTicket, canResetRound, canRevealVotes, pendingControl]);
+
 	const handleTicketSubmit = (event: FormEvent) => {
 		event.preventDefault();
-		sendMessage({ type: 'set_ticket', ticketTitle: ticketDraft.trim() });
+		if (!canUpdateTicket) {
+			return;
+		}
+		sendMessage({ type: 'set_ticket', ticketTitle: ticketDraftValue });
+	};
+
+	const handleStartRound = () => {
+		if (!canStartRound) {
+			return;
+		}
+		if (hasUnsavedTicketChange) {
+			sendMessage({ type: 'set_ticket', ticketTitle: ticketDraftValue });
+		}
+		sendMessage({ type: 'start_round' });
+	};
+
+	const handleResetRound = () => {
+		if (!canResetRound) {
+			return;
+		}
+		setPendingControl('reset');
+	};
+
+	const handleRevealVotes = () => {
+		if (!canRevealVotes) {
+			return;
+		}
+		setPendingControl('reveal');
+	};
+
+	const handleDoneTicket = () => {
+		if (!canDoneTicket) {
+			return;
+		}
+		setPendingControl('done');
+	};
+
+	const handleConfirmControl = () => {
+		if (pendingControl === 'reset' && canResetRound) {
+			sendMessage({ type: 'start_round' });
+		}
+		if (pendingControl === 'reveal' && canRevealVotes) {
+			sendMessage({ type: 'reveal_votes' });
+		}
+		if (pendingControl === 'done' && canDoneTicket) {
+			sendMessage({ type: 'set_ticket', ticketTitle: '' });
+		}
+		setPendingControl(null);
 	};
 
 	const seatLayouts = layoutSeats(participants.length, frameAspect);
@@ -205,37 +280,90 @@ export function RoomScreen({
 						<div className="panel">
 							<div className="panel-header">
 								<h3>{copy.hostControls}</h3>
-								<span className="badge muted-badge">{copy.ready}</span>
+								<div className="ticket-history-actions">
+									<button
+										className="ticket-history-button"
+										type="button"
+										aria-label={copy.previousTicket}
+										disabled
+									>
+										‹
+									</button>
+									<button
+										className="ticket-history-button"
+										type="button"
+										aria-label={copy.nextTicket}
+										disabled
+									>
+										›
+									</button>
+								</div>
 							</div>
-							<form className="stack" onSubmit={handleTicketSubmit}>
-								<label>
-									{copy.currentTicket}
-									<input
-										value={ticketDraft}
-										onChange={(event) => setTicketDraft(event.target.value)}
-										placeholder={copy.ticketPlaceholder}
-										maxLength={40}
-									/>
-								</label>
-								<button className="secondary-button" type="submit">
-									{copy.updateTicket}
-								</button>
+							<form
+								className="stack host-ticket-form"
+								onSubmit={handleTicketSubmit}
+							>
+								<div className="ticket-input-row">
+									<label className="ticket-input-label">
+										<input
+											value={ticketDraft}
+											onChange={(event) => setTicketDraft(event.target.value)}
+											aria-label={copy.currentTicket}
+											placeholder={copy.ticketPlaceholder}
+											maxLength={40}
+										/>
+									</label>
+									<button
+										className="ticket-submit-button"
+										type="submit"
+										aria-label={copy.updateTicket}
+										disabled={!canUpdateTicket}
+									>
+										✓
+									</button>
+								</div>
 							</form>
-							<div className="stack">
+							<div className="control-pad" aria-label={copy.hostControls}>
 								<button
-									className="primary-button"
+									className="control-pad-button control-pad-start secondary-button"
 									type="button"
-									onClick={() => sendMessage({ type: 'start_round' })}
+									disabled={!canStartRound}
+									onClick={handleStartRound}
 								>
-									{copy.startRound}
+									<span className="control-pad-label">{copy.startRound}</span>
 								</button>
 								<button
-									className="secondary-button"
+									className="control-pad-button control-pad-reset secondary-button"
 									type="button"
-									disabled={votedCount === 0}
-									onClick={() => sendMessage({ type: 'reveal_votes' })}
+									disabled={!canResetRound}
+									onClick={handleResetRound}
 								>
-									{copy.reveal}
+									<span className="control-pad-label">{copy.resetRound}</span>
+								</button>
+								<button
+									className={`control-pad-center ${pendingControl ? 'pending' : ''}`}
+									type="button"
+									disabled={!pendingControl}
+									aria-label={copy.confirmAction}
+									onClick={handleConfirmControl}
+								>
+									{pendingControl ? 'OK?' : copy.confirmAction}
+								</button>
+								<button
+									className="control-pad-button control-pad-reveal secondary-button"
+									type="button"
+									disabled={!canRevealVotes}
+									onClick={handleRevealVotes}
+								>
+									<span className="control-pad-label">{copy.reveal}</span>
+								</button>
+								<button
+									className="control-pad-button control-pad-done primary-button"
+									type="button"
+									disabled={!canDoneTicket}
+									onClick={handleDoneTicket}
+								>
+									<span className="control-pad-label">{copy.doneTicket}</span>
 								</button>
 							</div>
 						</div>
