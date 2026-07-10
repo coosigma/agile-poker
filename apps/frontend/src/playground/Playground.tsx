@@ -1,8 +1,8 @@
 /**
  * Poker room WebSocket playground.
  *
- * Picks a {@link RoomScenario}, seeds a fresh {@link MockRoomServer} into that
- * phase, installs the mock socket over the global `WebSocket`, then renders the
+ * Picks a {@link RoomScenario}, seeds a fresh {@link MockRoomServer}, installs
+ * the mock socket over the global `WebSocket`, then renders the
  * real `RoomScreen`. The screen's `useRoomSocket` connects live to the mock
  * server, so the preview is fully interactive (you can vote, start rounds and
  * reveal exactly as against the real worker) while staying offline.

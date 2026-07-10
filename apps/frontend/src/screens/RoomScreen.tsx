@@ -8,10 +8,10 @@ import {
 import { InfoTip } from '../components/InfoTip';
 import { LanguageSelector } from '../components/LanguageSelector';
 import { useRoomSocket } from '../hooks/useRoomSocket';
-import { STRINGS, formatText, type Language } from '../lib/i18n';
+import { STRINGS, type Language } from '../lib/i18n';
 import { computeScoreboardStats } from '../lib/scoreboard';
 import {
-	getPhaseLabel,
+	getVotingStateLabel,
 	layoutSeats,
 	roomShareUrl,
 	voteLabel,
@@ -88,17 +88,23 @@ export function RoomScreen({
 	const hasSavedTicket = Boolean(savedTicketTitle.trim());
 	const canUpdateTicket = Boolean(state) && hasUnsavedTicketChange;
 	const canStartRound =
-		Boolean(state) && state?.phase === 'lobby' && Boolean(ticketDraftValue);
+		Boolean(state) &&
+		(state?.votingState === 'noTopic' ||
+			state?.votingState === 'ready' ||
+			state?.votingState === 'completed') &&
+		Boolean(ticketDraftValue);
 	const canResetRound =
 		Boolean(state) &&
 		!hasUnsavedTicketChange &&
-		state?.phase !== 'lobby' &&
+		(state?.votingState === 'voting' || state?.votingState === 'revealed') &&
 		votedCount > 0;
-	const canRevealVotes = votedCount > 0;
+	const canRevealVotes = state?.votingState === 'voting' && votedCount > 0;
 	const canDoneTicket =
-		hasSavedTicket && !hasUnsavedTicketChange && state?.phase === 'revealed';
+		hasSavedTicket &&
+		!hasUnsavedTicketChange &&
+		state?.votingState === 'revealed';
 
-	const stats = computeScoreboardStats(participants, state?.phase);
+	const stats = computeScoreboardStats(participants, state?.votingState);
 
 	useEffect(() => {
 		if (
@@ -157,7 +163,7 @@ export function RoomScreen({
 			sendMessage({ type: 'reveal_votes' });
 		}
 		if (pendingControl === 'done' && canDoneTicket) {
-			sendMessage({ type: 'set_ticket', ticketTitle: '' });
+			sendMessage({ type: 'done_ticket' });
 		}
 		setPendingControl(null);
 	};
@@ -223,12 +229,11 @@ export function RoomScreen({
 						</div>
 						<div className="meta-list">
 							<div>
-								<span>{copy.currentPhase}</span>
+								<span>{copy.currentVotingState}</span>
 								<strong>
-									{getPhaseLabel(
+									{getVotingStateLabel(
 										language,
-										state?.phase ?? 'lobby',
-										state?.countdownValue ?? null,
+										state?.votingState ?? 'noTopic',
 									)}
 								</strong>
 							</div>
@@ -342,16 +347,6 @@ export function RoomScreen({
 
 				<main className="table-zone">
 					<div className="table-frame" ref={tableFrameRef}>
-						{state?.phase === 'countdown' ? (
-							<div className="countdown-overlay">
-								<span>{state.countdownValue}</span>
-								<small>
-									{formatText(copy.stageCountdown, {
-										countdown: state.countdownValue ?? '-',
-									})}
-								</small>
-							</div>
-						) : null}
 						<div className="ellipse-table">
 							<div className="table-center">
 								<p>{copy.revealTable}</p>
@@ -397,7 +392,7 @@ export function RoomScreen({
 									{participant.isHost ? ` · ${copy.participantHost}` : ''}
 								</span>
 								<strong>
-									{state?.phase === 'revealed'
+									{state?.votingState === 'revealed'
 										? voteLabel(participant.vote, language)
 										: participant.hasVoted
 											? copy.votedYes
@@ -461,9 +456,7 @@ export function RoomScreen({
 										key={value}
 										type="button"
 										className={`vote-card ${active ? 'active' : ''}`}
-										disabled={
-											state?.phase !== 'voting' && state?.phase !== 'revealed'
-										}
+										disabled={state?.votingState !== 'voting'}
 										onClick={() =>
 											sendMessage({
 												type: 'vote',
@@ -492,9 +485,7 @@ export function RoomScreen({
 										key={value}
 										type="button"
 										className={`vote-card special-card ${active ? 'active' : ''}`}
-										disabled={
-											state?.phase !== 'voting' && state?.phase !== 'revealed'
-										}
+										disabled={state?.votingState !== 'voting'}
 										onClick={() =>
 											sendMessage({
 												type: 'vote',

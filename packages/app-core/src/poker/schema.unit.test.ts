@@ -43,6 +43,9 @@ describe('decodeClientFrame', () => {
 		expect(
 			Either.isRight(decode(JSON.stringify({ type: 'start_round' }))),
 		).toBe(true);
+		expect(
+			Either.isRight(decode(JSON.stringify({ type: 'done_ticket' }))),
+		).toBe(true);
 	});
 
 	it('rejects malformed JSON with a typed error', () => {

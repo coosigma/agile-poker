@@ -10,9 +10,10 @@
 
 export interface RoomStateView {
 	readonly roomId: string;
-	readonly phase: 'lobby' | 'countdown' | 'voting' | 'revealed';
+	readonly roomState: 'empty' | 'active';
+	readonly votingState:
+		'noTopic' | 'ready' | 'voting' | 'revealed' | 'completed';
 	readonly ticketTitle: string;
-	readonly countdownValue: number | null;
 	readonly participants: readonly {
 		readonly id: string;
 		readonly name: string;

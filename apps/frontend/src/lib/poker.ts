@@ -1,5 +1,5 @@
 import { NUMERIC_CARD_VALUES, type RoomState, type VoteChoice } from '../types';
-import { formatText, STRINGS, type Language } from './i18n';
+import { STRINGS, type Language } from './i18n';
 
 const DEFAULT_NAME = '';
 const NAME_KEY = 'agile-poker:name';
@@ -96,22 +96,19 @@ export function voteNumericValue(vote: VoteChoice | null): number | null {
 	return currentValue;
 }
 
-export function getPhaseLabel(
+export function getVotingStateLabel(
 	language: Language,
-	phase: RoomState['phase'],
-	countdownValue: number | null,
+	votingState: RoomState['votingState'],
 ): string {
 	const copy = STRINGS[language];
-	if (phase === 'countdown') {
-		return formatText(copy.stageCountdown, {
-			countdown: countdownValue ?? '-',
-		});
-	}
-	if (phase === 'voting') {
+	if (votingState === 'voting') {
 		return copy.stageVoting;
 	}
-	if (phase === 'revealed') {
+	if (votingState === 'revealed') {
 		return copy.stageRevealed;
+	}
+	if (votingState === 'completed') {
+		return copy.doneTicket;
 	}
 	return copy.stageWaiting;
 }

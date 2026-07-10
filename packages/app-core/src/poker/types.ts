@@ -6,6 +6,9 @@
  * `@agile-poker/app-core/poker` entry point.
  */
 
+import type { RoomMachineState } from './room-machine.js';
+import type { VotingMachineState } from './voting-machine.js';
+
 export const NUMERIC_CARD_VALUES = [
 	'0',
 	'1',
@@ -26,8 +29,6 @@ export type NumericCardValue = (typeof NUMERIC_CARD_VALUES)[number];
 export type SpecialCardValue = (typeof SPECIAL_CARD_VALUES)[number];
 export type VoteModifier = (typeof MODIFIER_OPTIONS)[number];
 
-export type RoomPhase = 'lobby' | 'countdown' | 'voting' | 'revealed';
-
 export type VoteChoice =
 	| {
 			readonly kind: 'estimate';
@@ -47,16 +48,29 @@ export interface Participant {
 	readonly vote: VoteChoice | null;
 }
 
+export interface CompletedVote {
+	readonly participantId: string;
+	readonly participantName: string;
+	readonly vote: VoteChoice;
+}
+
+export interface CompletedRound {
+	readonly ticketTitle: string;
+	readonly votes: readonly CompletedVote[];
+}
+
 /**
  * Authoritative room state owned by the Durable Object. `participants` keeps
  * insertion order, which the host-selection rule depends on.
  */
 export interface RoomState {
 	readonly roomId: string;
+	readonly roomState: RoomMachineState;
+	readonly votingState: VotingMachineState;
 	readonly hostId: string | null;
 	readonly ticketTitle: string;
-	readonly phase: RoomPhase;
 	readonly participants: readonly Participant[];
+	readonly completedRounds: readonly CompletedRound[];
 }
 
 /** Participant shape sent to clients (host + connection flags derived). */
@@ -72,10 +86,11 @@ export interface ParticipantView {
 /** Room shape sent to clients over the wire. */
 export interface RoomStateView {
 	readonly roomId: string;
+	readonly roomState: RoomMachineState;
+	readonly votingState: VotingMachineState;
 	readonly ticketTitle: string;
-	readonly phase: RoomPhase;
-	readonly countdownValue: number | null;
 	readonly participants: readonly ParticipantView[];
+	readonly completedRounds: readonly CompletedRound[];
 }
 
 export type ClientMessage =
@@ -90,7 +105,8 @@ export type ClientMessage =
 	| { readonly type: 'vote'; readonly vote?: VoteChoice }
 	| { readonly type: 'clear_vote' }
 	| { readonly type: 'start_round' }
-	| { readonly type: 'reveal_votes' };
+	| { readonly type: 'reveal_votes' }
+	| { readonly type: 'done_ticket' };
 
 export type ServerMessage =
 	| {

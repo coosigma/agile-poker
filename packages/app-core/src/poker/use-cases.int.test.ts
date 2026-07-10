@@ -38,19 +38,23 @@ describe('room use cases through a per-room runtime', () => {
 		await runtime.runPromise(
 			applyMessage('guest', { type: 'join_room', roomId: 'ABC', name: 'Bob' }),
 		);
+		await runtime.runPromise(
+			applyMessage('host', { type: 'set_ticket', ticketTitle: 'PAY-1842' }),
+		);
+		await runtime.runPromise(applyMessage('host', { type: 'start_round' }));
 		const voted = await runtime.runPromise(
 			applyMessage('guest', {
 				type: 'vote',
 				vote: { kind: 'estimate', base: '5', modifier: 'base' },
 			}),
 		);
-		expect(voted.phase).toBe('voting');
+		expect(voted.votingState).toBe('voting');
 		expect(voted.participants).toHaveLength(2);
 
 		const revealed = await runtime.runPromise(
 			applyMessage('host', { type: 'reveal_votes' }),
 		);
-		expect(revealed.phase).toBe('revealed');
+		expect(revealed.votingState).toBe('revealed');
 		await runtime.dispose();
 	});
 
@@ -70,7 +74,7 @@ describe('room use cases through a per-room runtime', () => {
 		const view = await runtime.runPromise(
 			applyMessage('guest', { type: 'reveal_votes' }),
 		);
-		expect(view.phase).toBe('lobby');
+		expect(view.votingState).toBe('noTopic');
 		await runtime.dispose();
 	});
 
