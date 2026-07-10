@@ -24,6 +24,10 @@ test.describe('edge: frontend ↔ backend', () => {
 	test('WS /ws delivers room state when a host creates a room', async ({
 		page,
 	}) => {
+		await page.addInitScript(() => {
+			window.localStorage.setItem('agile-poker:language', 'en');
+		});
+
 		await test.step('enter the create-room flow', async () => {
 			await page.goto('/');
 			await page.getByRole('button', { name: /Create room/ }).click();

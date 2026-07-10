@@ -11,6 +11,9 @@ import { expect, test } from '@playwright/test';
  * See tests/CONTRACT.md → node smoke / frontend.
  */
 test('the app loads and renders its entry shell', async ({ page }) => {
+	await page.addInitScript(() => {
+		window.localStorage.setItem('agile-poker:language', 'en');
+	});
 	await page.goto('/');
 
 	await expect(
