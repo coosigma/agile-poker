@@ -54,7 +54,7 @@ export function votedCount(page: Page): Locator {
 		.locator('strong');
 }
 
-/** The revealed mean (average) value on the scoreboard. */
+/** A value on the revealed scoreboard, selected by its label. */
 export function scoreboardValue(page: Page, label: string): Locator {
 	return page
 		.locator('.scoreboard-cell')

@@ -18,7 +18,7 @@ export function computeScoreboardStats(
 
 	if (revealed) {
 		for (const participant of participants) {
-			if (participant.vote) {
+			if (participant.vote !== null) {
 				totalVotes += 1;
 			}
 			const numericValue = voteNumericValue(participant.vote);
