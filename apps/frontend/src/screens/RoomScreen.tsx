@@ -76,6 +76,7 @@ export function RoomScreen({
 		null;
 	const isHost = Boolean(self?.isHost);
 	const participants = state?.participants ?? [];
+	const completedRounds = state?.completedRounds ?? [];
 	const connectedCount = participants.filter(
 		(participant) => participant.connected,
 	).length;
@@ -343,6 +344,45 @@ export function RoomScreen({
 							</div>
 						</div>
 					) : null}
+
+					<div className="panel completed-rounds-panel">
+						<div className="panel-header">
+							<h3>{copy.completedTickets}</h3>
+							<span className="badge muted-badge">
+								{completedRounds.length}
+							</span>
+						</div>
+						{completedRounds.length > 0 ? (
+							<div className="completed-rounds-list">
+								{[...completedRounds].reverse().map((round, index) => (
+									<article
+										className="completed-round-card"
+										key={`${round.ticketTitle}-${completedRounds.length - index}`}
+									>
+										<div className="completed-round-title">
+											<strong>{round.ticketTitle}</strong>
+											<span>
+												{round.votes.length} {copy.statVotes}
+											</span>
+										</div>
+										<div className="completed-votes">
+											{round.votes.map((completedVote) => (
+												<span
+													className="completed-vote-pill"
+													key={`${round.ticketTitle}-${completedVote.participantId}`}
+												>
+													{completedVote.participantName}:{' '}
+													{voteLabel(completedVote.vote, language)}
+												</span>
+											))}
+										</div>
+									</article>
+								))}
+							</div>
+						) : (
+							<p className="empty-panel-copy">{copy.noCompletedTickets}</p>
+						)}
+					</div>
 				</aside>
 
 				<main className="table-zone">
