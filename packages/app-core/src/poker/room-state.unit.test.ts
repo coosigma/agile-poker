@@ -6,6 +6,7 @@ import {
 	doneTicket,
 	joinRoom,
 	leaveRoom,
+	MAX_COMPLETED_ROUNDS,
 	makeUniqueParticipantName,
 	normalizeParticipantName,
 	normalizeRoomId,
@@ -162,6 +163,24 @@ describe('host-guarded transitions', () => {
 		state = startRound(state, 'host');
 		expect(state.votingState).toBe('voting');
 		expect(state.completedRounds).toHaveLength(1);
+	});
+
+	test('completed topic history keeps only the most recent rounds', () => {
+		let state = seededRoom();
+
+		for (let index = 0; index < MAX_COMPLETED_ROUNDS + 2; index += 1) {
+			state = setTicket(state, 'host', `PAY-${index}`);
+			state = startRound(state, 'host');
+			state = castVote(state, 'host', ESTIMATE);
+			state = revealVotes(state, 'host');
+			state = doneTicket(state, 'host');
+		}
+
+		expect(state.completedRounds).toHaveLength(MAX_COMPLETED_ROUNDS);
+		expect(state.completedRounds[0]?.ticketTitle).toBe('PAY-2');
+		expect(state.completedRounds.at(-1)?.ticketTitle).toBe(
+			`PAY-${MAX_COMPLETED_ROUNDS + 1}`,
+		);
 	});
 
 	test('a non-host cannot start a round', () => {

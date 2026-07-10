@@ -9,6 +9,8 @@ import type { ParticipantView, RoomStateView } from './types.js';
 import { transitionRoomState } from './room-machine.js';
 import { transitionVotingState } from './voting-machine.js';
 
+export const MAX_COMPLETED_ROUNDS = 20;
+
 export function normalizeRoomId(roomId: string): string {
 	return roomId.trim().toUpperCase();
 }
@@ -240,7 +242,7 @@ export function doneTicket(state: RoomState, id: string): RoomState {
 		ticketTitle: '',
 		participants: state.participants.map((p) => ({ ...p, vote: null })),
 		completedRounds: completedRound
-			? [...state.completedRounds, completedRound]
+			? [...state.completedRounds, completedRound].slice(-MAX_COMPLETED_ROUNDS)
 			: state.completedRounds,
 	};
 }
