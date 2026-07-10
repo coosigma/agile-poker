@@ -223,6 +223,7 @@ export function toRoomStateView(state: RoomState): RoomStateView {
 			id: participant.id,
 			name: participant.name,
 			vote: participant.vote,
+			hasVoted: participant.vote !== null,
 			connected: true,
 			isHost: participant.id === state.hostId,
 		}),
@@ -234,5 +235,22 @@ export function toRoomStateView(state: RoomState): RoomStateView {
 		phase: state.phase,
 		countdownValue: null,
 		participants,
+	};
+}
+
+export function redactRoomStateViewForParticipant(
+	view: RoomStateView,
+	participantId: string,
+): RoomStateView {
+	if (view.phase === 'revealed') {
+		return view;
+	}
+
+	return {
+		...view,
+		participants: view.participants.map((participant) => ({
+			...participant,
+			vote: participant.id === participantId ? participant.vote : null,
+		})),
 	};
 }

@@ -17,6 +17,7 @@ export interface RoomStateView {
 		readonly id: string;
 		readonly name: string;
 		readonly vote: unknown;
+		readonly hasVoted: boolean;
 		readonly connected: boolean;
 		readonly isHost: boolean;
 	}[];

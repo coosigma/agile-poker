@@ -18,6 +18,10 @@ import {
 
 const LANGUAGE_KEY = 'agile-poker:language';
 
+function escapeRegExp(value: string): string {
+	return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 /** Force the app into English so text selectors are deterministic. */
 export async function forceEnglish(context: BrowserContext): Promise<void> {
 	await context.addInitScript(
@@ -50,12 +54,37 @@ export function votedCount(page: Page): Locator {
 		.locator('strong');
 }
 
-/** The revealed mean (average) value on the scoreboard. */
-export function averageValue(page: Page): Locator {
+/** A value on the revealed scoreboard, selected by its label. */
+export function scoreboardValue(page: Page, label: string): Locator {
 	return page
 		.locator('.scoreboard-cell')
-		.filter({ hasText: 'Mean' })
+		.filter({ hasText: label })
 		.locator('.scoreboard-value');
+}
+
+export function votesValue(page: Page): Locator {
+	return scoreboardValue(page, 'Votes');
+}
+
+/** The revealed mean (average) value on the scoreboard. */
+export function averageValue(page: Page): Locator {
+	return scoreboardValue(page, 'Mean');
+}
+
+export function stdDevValue(page: Page): Locator {
+	return scoreboardValue(page, 'Std dev');
+}
+
+export function participantSeat(page: Page, name: string): Locator {
+	return page.locator('.seat-card').filter({
+		has: page.locator('.seat-name', {
+			hasText: new RegExp(`^${escapeRegExp(name)}(?:\\s+·\\s+Host)?$`),
+		}),
+	});
+}
+
+export function participantVoteValue(page: Page, name: string): Locator {
+	return participantSeat(page, name).locator('strong');
 }
 
 /** A numeric vote card by its face value, e.g. `numericCard(page, '3')`. */

@@ -8,6 +8,7 @@ import {
 	makeUniqueParticipantName,
 	normalizeParticipantName,
 	normalizeRoomId,
+	redactRoomStateViewForParticipant,
 	revealVotes,
 	setName,
 	setTicket,
@@ -168,15 +169,73 @@ describe('toRoomStateView', () => {
 			phase: 'lobby',
 			countdownValue: null,
 			participants: [
-				{ id: 'host', name: 'Host', vote: null, connected: true, isHost: true },
+				{
+					id: 'host',
+					name: 'Host',
+					vote: null,
+					hasVoted: false,
+					connected: true,
+					isHost: true,
+				},
 				{
 					id: 'guest',
 					name: 'Guest',
 					vote: null,
+					hasVoted: false,
 					connected: true,
 					isHost: false,
 				},
 			],
 		});
+	});
+
+	test('redacts other participants raw votes before reveal', () => {
+		let state = joinRoom(room(), { id: 'host', name: 'Host' });
+		state = joinRoom(state, { id: 'guest', name: 'Guest' });
+		state = castVote(state, 'host', ESTIMATE);
+		state = castVote(state, 'guest', {
+			kind: 'estimate',
+			base: '8',
+			modifier: 'base',
+		});
+
+		const hostView = redactRoomStateViewForParticipant(
+			toRoomStateView(state),
+			'host',
+		);
+
+		expect(hostView.participants).toEqual([
+			expect.objectContaining({
+				id: 'host',
+				vote: ESTIMATE,
+				hasVoted: true,
+			}),
+			expect.objectContaining({
+				id: 'guest',
+				vote: null,
+				hasVoted: true,
+			}),
+		]);
+	});
+
+	test('keeps all raw votes after reveal', () => {
+		let state = joinRoom(room(), { id: 'host', name: 'Host' });
+		state = joinRoom(state, { id: 'guest', name: 'Guest' });
+		state = castVote(state, 'host', ESTIMATE);
+		state = castVote(state, 'guest', {
+			kind: 'estimate',
+			base: '8',
+			modifier: 'base',
+		});
+		state = revealVotes(state, 'host');
+
+		const hostView = redactRoomStateViewForParticipant(
+			toRoomStateView(state),
+			'host',
+		);
+
+		expect(
+			hostView.participants.map((participant) => participant.vote),
+		).toEqual([ESTIMATE, { kind: 'estimate', base: '8', modifier: 'base' }]);
 	});
 });

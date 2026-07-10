@@ -1,4 +1,12 @@
-import { averageValue, clickReveal, expect } from '../utils/app';
+import {
+	averageValue,
+	clickReveal,
+	expect,
+	participantVoteValue,
+	revealButton,
+	stdDevValue,
+	votesValue,
+} from '../utils/app';
 import type { UseCase } from './context';
 
 /**
@@ -13,12 +21,33 @@ export const ucRevealVotes: UseCase = {
 	from: 'votesCast',
 	to: 'revealed',
 	async run(ctx) {
-		const expectedAverage = (
-			(Number(ctx.state.hostVote) + Number(ctx.state.teammateVote)) /
-			2
+		const hostVote = Number(ctx.state.hostVote);
+		const teammateVote = Number(ctx.state.teammateVote);
+		const mean = (hostVote + teammateVote) / 2;
+		const expectedAverage = mean.toFixed(1);
+		const expectedStdDev = Math.sqrt(
+			((hostVote - mean) ** 2 + (teammateVote - mean) ** 2) / 2,
 		).toFixed(1);
+
+		await expect(
+			participantVoteValue(ctx.host, ctx.state.teammateName),
+		).toHaveText('Voted');
+		await expect(
+			participantVoteValue(ctx.teammate, ctx.state.hostName),
+		).toHaveText('Voted');
+		await expect(revealButton(ctx.host)).toBeEnabled();
+
 		await clickReveal(ctx.host);
-		await expect(averageValue(ctx.host)).toHaveText(expectedAverage);
-		await expect(averageValue(ctx.teammate)).toHaveText(expectedAverage);
+		for (const page of [ctx.host, ctx.teammate]) {
+			await expect(votesValue(page)).toHaveText('2');
+			await expect(averageValue(page)).toHaveText(expectedAverage);
+			await expect(stdDevValue(page)).toHaveText(expectedStdDev);
+			await expect(participantVoteValue(page, ctx.state.hostName)).toHaveText(
+				ctx.state.hostVote,
+			);
+			await expect(
+				participantVoteValue(page, ctx.state.teammateName),
+			).toHaveText(ctx.state.teammateVote);
+		}
 	},
 };

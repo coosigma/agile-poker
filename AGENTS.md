@@ -12,3 +12,8 @@ Guidance for AI coding agents (Copilot, Claude, etc.) working in this repository
 
 - Prefer **squash merge**.
 - Do not use the default "Merge pull request #N" subject; write a clear, conventional commit subject for the squash.
+
+## Interaction preferences
+
+- Do not use interactive question/confirmation UI for agent decisions.
+- When user input is needed, send all questions together as a plain ordered list, end the turn, and wait for the user's reply.

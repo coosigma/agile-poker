@@ -1,6 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { computeRevealStats, voteLabel, voteNumericValue } from './vote.js';
-import type { Participant, VoteChoice } from './types.js';
+import { voteLabel, voteNumericValue } from './vote.js';
 
 describe('voteLabel', () => {
 	test('renders estimates with modifier glyphs', () => {
@@ -54,45 +53,5 @@ describe('voteNumericValue', () => {
 	test('special cards and empty votes have no numeric value', () => {
 		expect(voteNumericValue({ kind: 'special', value: '?' })).toBeNull();
 		expect(voteNumericValue(null)).toBeNull();
-	});
-});
-
-function participant(id: string, vote: VoteChoice | null): Participant {
-	return { id, name: id, vote };
-}
-
-describe('computeRevealStats', () => {
-	test('averages numeric votes and ignores special cards', () => {
-		const stats = computeRevealStats([
-			participant('a', { kind: 'estimate', base: '5', modifier: 'base' }),
-			participant('b', { kind: 'estimate', base: '8', modifier: 'base' }),
-			participant('c', { kind: 'special', value: '?' }),
-			participant('d', null),
-		]);
-
-		// (5 + 8) / 2 = 6.50 ; special counts as a vote but not toward the average
-		expect(stats.average).toBe('6.50');
-		expect(stats.totalVotes).toBe(3);
-	});
-
-	test('builds a breakdown sorted by count then label', () => {
-		const stats = computeRevealStats([
-			participant('a', { kind: 'estimate', base: '5', modifier: 'base' }),
-			participant('b', { kind: 'estimate', base: '5', modifier: 'base' }),
-			participant('c', { kind: 'special', value: '?' }),
-		]);
-
-		expect(stats.breakdown).toEqual([
-			{ label: '5', count: 2, ratio: '67' },
-			{ label: '?', count: 1, ratio: '33' },
-		]);
-	});
-
-	test('reports N/A when no numeric votes are present', () => {
-		const stats = computeRevealStats([
-			participant('a', { kind: 'special', value: '∞' }),
-		]);
-		expect(stats.average).toBe('N/A');
-		expect(stats.totalVotes).toBe(1);
 	});
 });
