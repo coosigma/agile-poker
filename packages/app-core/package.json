@@ -6,6 +6,8 @@
 	"exports": {
 		".": "./src/index.ts",
 		"./poker": "./src/poker/index.ts",
+		"./poker/room-machine": "./src/poker/room-machine.ts",
+		"./poker/voting-machine": "./src/poker/voting-machine.ts",
 		"./poker/server": "./src/poker/server.ts"
 	},
 	"scripts": {
@@ -15,7 +17,8 @@
 	},
 	"dependencies": {
 		"effect": "^3.21.4",
-		"graphql": "^16.11.0"
+		"graphql": "^16.11.0",
+		"xstate": "^5.32.2"
 	},
 	"devDependencies": {
 		"vitest": "^4.1.9",
