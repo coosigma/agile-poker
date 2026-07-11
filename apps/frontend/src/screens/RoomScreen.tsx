@@ -8,10 +8,10 @@ import {
 import { InfoTip } from '../components/InfoTip';
 import { LanguageSelector } from '../components/LanguageSelector';
 import { useRoomSocket } from '../hooks/useRoomSocket';
-import { STRINGS, formatText, type Language } from '../lib/i18n';
+import { STRINGS, type Language } from '../lib/i18n';
 import { computeScoreboardStats } from '../lib/scoreboard';
 import {
-	getPhaseLabel,
+	getVotingStateLabel,
 	layoutSeats,
 	roomShareUrl,
 	voteLabel,
@@ -76,6 +76,7 @@ export function RoomScreen({
 		null;
 	const isHost = Boolean(self?.isHost);
 	const participants = state?.participants ?? [];
+	const completedRounds = state?.completedRounds ?? [];
 	const connectedCount = participants.filter(
 		(participant) => participant.connected,
 	).length;
@@ -86,19 +87,29 @@ export function RoomScreen({
 	const ticketDraftValue = ticketDraft.trim();
 	const hasUnsavedTicketChange = ticketDraftValue !== savedTicketTitle;
 	const hasSavedTicket = Boolean(savedTicketTitle.trim());
-	const canUpdateTicket = Boolean(state) && hasUnsavedTicketChange;
+	const canEditTicket =
+		state?.votingState === 'noTopic' ||
+		state?.votingState === 'ready' ||
+		state?.votingState === 'completed';
+	const canUpdateTicket = canEditTicket && hasUnsavedTicketChange;
 	const canStartRound =
-		Boolean(state) && state?.phase === 'lobby' && Boolean(ticketDraftValue);
+		Boolean(state) &&
+		(state?.votingState === 'noTopic' ||
+			state?.votingState === 'ready' ||
+			state?.votingState === 'completed') &&
+		Boolean(ticketDraftValue);
 	const canResetRound =
 		Boolean(state) &&
 		!hasUnsavedTicketChange &&
-		state?.phase !== 'lobby' &&
+		(state?.votingState === 'voting' || state?.votingState === 'revealed') &&
 		votedCount > 0;
-	const canRevealVotes = votedCount > 0;
+	const canRevealVotes = state?.votingState === 'voting' && votedCount > 0;
 	const canDoneTicket =
-		hasSavedTicket && !hasUnsavedTicketChange && state?.phase === 'revealed';
+		hasSavedTicket &&
+		!hasUnsavedTicketChange &&
+		state?.votingState === 'revealed';
 
-	const stats = computeScoreboardStats(participants, state?.phase);
+	const stats = computeScoreboardStats(participants, state?.votingState);
 
 	useEffect(() => {
 		if (
@@ -157,7 +168,7 @@ export function RoomScreen({
 			sendMessage({ type: 'reveal_votes' });
 		}
 		if (pendingControl === 'done' && canDoneTicket) {
-			sendMessage({ type: 'set_ticket', ticketTitle: '' });
+			sendMessage({ type: 'done_ticket' });
 		}
 		setPendingControl(null);
 	};
@@ -223,12 +234,11 @@ export function RoomScreen({
 						</div>
 						<div className="meta-list">
 							<div>
-								<span>{copy.currentPhase}</span>
+								<span>{copy.currentVotingState}</span>
 								<strong>
-									{getPhaseLabel(
+									{getVotingStateLabel(
 										language,
-										state?.phase ?? 'lobby',
-										state?.countdownValue ?? null,
+										state?.votingState ?? 'noTopic',
 									)}
 								</strong>
 							</div>
@@ -338,20 +348,49 @@ export function RoomScreen({
 							</div>
 						</div>
 					) : null}
+
+					<div className="panel completed-rounds-panel">
+						<div className="panel-header">
+							<h3>{copy.completedTickets}</h3>
+							<span className="badge muted-badge">
+								{completedRounds.length}
+							</span>
+						</div>
+						{completedRounds.length > 0 ? (
+							<div className="completed-rounds-list">
+								{[...completedRounds].reverse().map((round, index) => (
+									<article
+										className="completed-round-card"
+										key={`${round.ticketTitle}-${completedRounds.length - index}`}
+									>
+										<div className="completed-round-title">
+											<strong>{round.ticketTitle}</strong>
+											<span>
+												{round.votes.length} {copy.statVotes}
+											</span>
+										</div>
+										<div className="completed-votes">
+											{round.votes.map((completedVote) => (
+												<span
+													className="completed-vote-pill"
+													key={`${round.ticketTitle}-${completedVote.participantId}`}
+												>
+													{completedVote.participantName}:{' '}
+													{voteLabel(completedVote.vote, language)}
+												</span>
+											))}
+										</div>
+									</article>
+								))}
+							</div>
+						) : (
+							<p className="empty-panel-copy">{copy.noCompletedTickets}</p>
+						)}
+					</div>
 				</aside>
 
 				<main className="table-zone">
 					<div className="table-frame" ref={tableFrameRef}>
-						{state?.phase === 'countdown' ? (
-							<div className="countdown-overlay">
-								<span>{state.countdownValue}</span>
-								<small>
-									{formatText(copy.stageCountdown, {
-										countdown: state.countdownValue ?? '-',
-									})}
-								</small>
-							</div>
-						) : null}
 						<div className="ellipse-table">
 							<div className="table-center">
 								<p>{copy.revealTable}</p>
@@ -397,7 +436,7 @@ export function RoomScreen({
 									{participant.isHost ? ` · ${copy.participantHost}` : ''}
 								</span>
 								<strong>
-									{state?.phase === 'revealed'
+									{state?.votingState === 'revealed'
 										? voteLabel(participant.vote, language)
 										: participant.hasVoted
 											? copy.votedYes
@@ -461,9 +500,7 @@ export function RoomScreen({
 										key={value}
 										type="button"
 										className={`vote-card ${active ? 'active' : ''}`}
-										disabled={
-											state?.phase !== 'voting' && state?.phase !== 'revealed'
-										}
+										disabled={state?.votingState !== 'voting'}
 										onClick={() =>
 											sendMessage({
 												type: 'vote',
@@ -492,9 +529,7 @@ export function RoomScreen({
 										key={value}
 										type="button"
 										className={`vote-card special-card ${active ? 'active' : ''}`}
-										disabled={
-											state?.phase !== 'voting' && state?.phase !== 'revealed'
-										}
+										disabled={state?.votingState !== 'voting'}
 										onClick={() =>
 											sendMessage({
 												type: 'vote',
@@ -513,6 +548,7 @@ export function RoomScreen({
 						<button
 							className="vote-card clear-card"
 							type="button"
+							disabled={state?.votingState !== 'voting'}
 							onClick={() => sendMessage({ type: 'clear_vote' })}
 						>
 							{copy.clearVote}

@@ -173,6 +173,10 @@ describe('RoomDO boundary paths', () => {
 			JSON.stringify({ type: 'join_room', roomId: 'room-redact', name: 'Bob' }),
 		);
 		await host.message(
+			JSON.stringify({ type: 'set_ticket', ticketTitle: 'PAY-1842' }),
+		);
+		await host.message(JSON.stringify({ type: 'start_round' }));
+		await host.message(
 			JSON.stringify({
 				type: 'vote',
 				vote: { kind: 'estimate', base: '5', modifier: 'base' },
@@ -241,12 +245,12 @@ describe('RoomDO boundary paths', () => {
 		);
 		const frame = client.lastFrame();
 		expect(frame?.type).toBe('room_state');
-		// If the pre-join vote had applied, the phase would be 'voting'.
+		// If the pre-join vote had applied, the voting state would be 'voting'.
 		const state = frame?.state as {
-			phase: string;
+			votingState: string;
 			participants: { vote: unknown }[];
 		};
-		expect(state.phase).toBe('lobby');
+		expect(state.votingState).toBe('noTopic');
 		expect(state.participants[0]?.vote).toBeNull();
 	});
 

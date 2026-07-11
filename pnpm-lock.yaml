@@ -143,6 +143,9 @@ importers:
       graphql:
         specifier: ^16.11.0
         version: 16.14.2
+      xstate:
+        specifier: ^5.32.2
+        version: 5.32.2
     devDependencies:
       typescript:
         specifier: ^6.0.3

@@ -55,6 +55,7 @@ export const ClientMessageSchema = Schema.Union(
 	Schema.Struct({ type: Schema.Literal('clear_vote') }),
 	Schema.Struct({ type: Schema.Literal('start_round') }),
 	Schema.Struct({ type: Schema.Literal('reveal_votes') }),
+	Schema.Struct({ type: Schema.Literal('done_ticket') }),
 );
 
 /**

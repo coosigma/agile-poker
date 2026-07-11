@@ -48,11 +48,6 @@ export class MockRoomServer {
 		this.state = createRoomState(roomId);
 	}
 
-	/** Current room phase, so the playground can label controls contextually. */
-	get phase(): RoomState['phase'] {
-		return this.state.phase;
-	}
-
 	/**
 	 * Add a simulated participant at runtime (as if another person joined over a
 	 * live socket) and broadcast the new seating to connected clients. When a
@@ -69,7 +64,7 @@ export class MockRoomServer {
 			name: displayName,
 			claimHost: false,
 		});
-		if (this.state.phase === 'voting') {
+		if (this.state.votingState === 'voting') {
 			const base =
 				SIM_VOTE_BASES[(this.simCounter - 1) % SIM_VOTE_BASES.length];
 			this.state = applyClientMessage(this.state, id, {
@@ -110,7 +105,7 @@ export class MockRoomServer {
 
 	/**
 	 * Apply a message from a pre-existing (seeded) participant that has no live
-	 * socket. Used by scenarios to stage other people, votes and phase before the
+	 * socket. Used by scenarios to stage other people, votes and voting state before the
 	 * previewed client connects.
 	 */
 	seed(participantId: string, message: ClientMessage): void {

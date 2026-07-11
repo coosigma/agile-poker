@@ -1,10 +1,15 @@
 import type {
 	ClientMessage,
+	CompletedRound,
 	Participant,
 	RoomState,
 	VoteChoice,
 } from './types.js';
 import type { ParticipantView, RoomStateView } from './types.js';
+import { transitionRoomState } from './room-machine.js';
+import { transitionVotingState } from './voting-machine.js';
+
+export const MAX_COMPLETED_ROUNDS = 20;
 
 export function normalizeRoomId(roomId: string): string {
 	return roomId.trim().toUpperCase();
@@ -17,10 +22,12 @@ export function normalizeParticipantName(name: string): string {
 export function createRoomState(roomId: string): RoomState {
 	return {
 		roomId,
+		roomState: 'empty',
+		votingState: 'noTopic',
 		hostId: null,
 		ticketTitle: '',
-		phase: 'lobby',
 		participants: [],
+		completedRounds: [],
 	};
 }
 
@@ -93,6 +100,7 @@ export function joinRoom(state: RoomState, input: JoinRoomInput): RoomState {
 
 	let next: RoomState = {
 		...state,
+		roomState: transitionRoomState(state.roomState, { type: 'JOIN' }),
 		participants: [...state.participants, participant],
 	};
 
@@ -129,10 +137,21 @@ export function setTicket(
 	if (id !== state.hostId) {
 		return state;
 	}
-	return { ...state, ticketTitle: ticketTitle || '' };
+	if (
+		state.votingState !== 'noTopic' &&
+		state.votingState !== 'ready' &&
+		state.votingState !== 'completed'
+	) {
+		return state;
+	}
+	const nextTitle = ticketTitle || '';
+	const nextVotingState = transitionVotingState(state.votingState, {
+		type: nextTitle ? 'SET_TOPIC' : 'CLEAR_TOPIC',
+	});
+	return { ...state, ticketTitle: nextTitle, votingState: nextVotingState };
 }
 
-/** Casting a vote moves the room into the voting phase. */
+/** Casting a vote is only valid while the current topic is open for voting. */
 export function castVote(
 	state: RoomState,
 	id: string,
@@ -141,14 +160,23 @@ export function castVote(
 	if (!state.participants.some((p) => p.id === id)) {
 		return state;
 	}
+	const nextVotingState = transitionVotingState(state.votingState, {
+		type: 'VOTE',
+	});
+	if (nextVotingState === state.votingState && state.votingState !== 'voting') {
+		return state;
+	}
 	const withVote = replaceParticipant(state, id, (p) => ({
 		...p,
 		vote: vote ?? null,
 	}));
-	return { ...withVote, phase: 'voting' };
+	return { ...withVote, votingState: nextVotingState };
 }
 
 export function clearVote(state: RoomState, id: string): RoomState {
+	if (state.votingState !== 'voting') {
+		return state;
+	}
 	return replaceParticipant(state, id, (p) => ({ ...p, vote: null }));
 }
 
@@ -157,9 +185,17 @@ export function startRound(state: RoomState, id: string): RoomState {
 	if (id !== state.hostId) {
 		return state;
 	}
+	const event =
+		state.votingState === 'ready'
+			? { type: 'START' as const }
+			: { type: 'RESET' as const };
+	const nextVotingState = transitionVotingState(state.votingState, event);
+	if (nextVotingState === state.votingState && state.votingState !== 'voting') {
+		return state;
+	}
 	return {
 		...state,
-		phase: 'voting',
+		votingState: nextVotingState,
 		participants: state.participants.map((p) => ({ ...p, vote: null })),
 	};
 }
@@ -169,7 +205,56 @@ export function revealVotes(state: RoomState, id: string): RoomState {
 	if (id !== state.hostId) {
 		return state;
 	}
-	return { ...state, phase: 'revealed' };
+	const nextVotingState = transitionVotingState(state.votingState, {
+		type: 'REVEAL',
+	});
+	return nextVotingState === state.votingState
+		? state
+		: { ...state, votingState: nextVotingState };
+}
+
+function completeCurrentRound(state: RoomState): CompletedRound | null {
+	if (!state.ticketTitle.trim()) {
+		return null;
+	}
+	const votes = state.participants.flatMap((participant) =>
+		participant.vote === null
+			? []
+			: [
+					{
+						participantId: participant.id,
+						participantName: participant.name,
+						vote: participant.vote,
+					},
+				],
+	);
+	if (votes.length === 0) {
+		return null;
+	}
+	return { ticketTitle: state.ticketTitle, votes };
+}
+
+/** Host-only: complete the current revealed topic and archive its result. */
+export function doneTicket(state: RoomState, id: string): RoomState {
+	if (id !== state.hostId) {
+		return state;
+	}
+	const nextVotingState = transitionVotingState(state.votingState, {
+		type: 'DONE',
+	});
+	if (nextVotingState === state.votingState) {
+		return state;
+	}
+	const completedRound = completeCurrentRound(state);
+	return {
+		...state,
+		votingState: nextVotingState,
+		ticketTitle: '',
+		participants: state.participants.map((p) => ({ ...p, vote: null })),
+		completedRounds: completedRound
+			? [...state.completedRounds, completedRound].slice(-MAX_COMPLETED_ROUNDS)
+			: state.completedRounds,
+	};
 }
 
 /** Remove a participant (e.g. on disconnect) and reassign the host. */
@@ -178,7 +263,10 @@ export function leaveRoom(state: RoomState, id: string): RoomState {
 	if (participants.length === state.participants.length) {
 		return state;
 	}
-	return chooseHost({ ...state, participants });
+	const nextRoomState = transitionRoomState(state.roomState, {
+		type: participants.length === 0 ? 'ROOM_EMPTIED' : 'LEAVE',
+	});
+	return chooseHost({ ...state, roomState: nextRoomState, participants });
 }
 
 /**
@@ -213,6 +301,8 @@ export function applyClientMessage(
 			return startRound(state, participantId);
 		case 'reveal_votes':
 			return revealVotes(state, participantId);
+		case 'done_ticket':
+			return doneTicket(state, participantId);
 	}
 }
 
@@ -231,10 +321,11 @@ export function toRoomStateView(state: RoomState): RoomStateView {
 
 	return {
 		roomId: state.roomId,
+		roomState: state.roomState,
+		votingState: state.votingState,
 		ticketTitle: state.ticketTitle,
-		phase: state.phase,
-		countdownValue: null,
 		participants,
+		completedRounds: state.completedRounds,
 	};
 }
 
@@ -242,7 +333,7 @@ export function redactRoomStateViewForParticipant(
 	view: RoomStateView,
 	participantId: string,
 ): RoomStateView {
-	if (view.phase === 'revealed') {
+	if (view.votingState === 'revealed') {
 		return view;
 	}
 

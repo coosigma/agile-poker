@@ -20,9 +20,10 @@ const originalWebSocket = globalThis.WebSocket;
 function makeRoomState(overrides: Partial<RoomState> = {}): RoomState {
 	return {
 		roomId: 'ABC',
-		phase: 'lobby',
+		roomState: 'active',
+		votingState: 'noTopic',
 		ticketTitle: '',
-		countdownValue: null,
+		completedRounds: [],
 		participants: [
 			{
 				id: 's1',
@@ -85,7 +86,7 @@ describe('useRoomSocket', () => {
 		const { result } = renderHook(() => useRoomSocket(baseOptions));
 		act(() => MockWebSocket.latest().emitOpen());
 
-		const state = makeRoomState({ phase: 'voting' });
+		const state = makeRoomState({ votingState: 'voting' });
 		act(() =>
 			MockWebSocket.latest().emitMessage({
 				type: 'room_state',

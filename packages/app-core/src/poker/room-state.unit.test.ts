@@ -3,8 +3,10 @@ import {
 	castVote,
 	clearVote,
 	createRoomState,
+	doneTicket,
 	joinRoom,
 	leaveRoom,
+	MAX_COMPLETED_ROUNDS,
 	makeUniqueParticipantName,
 	normalizeParticipantName,
 	normalizeRoomId,
@@ -81,6 +83,20 @@ describe('host-guarded transitions', () => {
 		return state;
 	}
 
+	function votingRoom(): RoomState {
+		let state = setTicket(seededRoom(), 'host', 'PAY-1842');
+		state = startRound(state, 'host');
+		return state;
+	}
+
+	function revealedRoom(): RoomState {
+		let state = votingRoom();
+		state = castVote(state, 'host', ESTIMATE);
+		state = castVote(state, 'guest', ESTIMATE);
+		state = revealVotes(state, 'host');
+		return state;
+	}
+
 	test('the host can set the ticket', () => {
 		const state = setTicket(seededRoom(), 'host', 'PAY-1842');
 		expect(state.ticketTitle).toBe('PAY-1842');
@@ -94,26 +110,101 @@ describe('host-guarded transitions', () => {
 	});
 
 	test('a non-host cannot reveal votes', () => {
-		const before = seededRoom();
+		const before = votingRoom();
 		const after = revealVotes(before, 'guest');
-		expect(after.phase).toBe('lobby');
+		expect(after.votingState).toBe('voting');
 		expect(after).toBe(before);
 	});
 
-	test('the host reveals votes, changing the phase', () => {
-		const state = revealVotes(seededRoom(), 'host');
-		expect(state.phase).toBe('revealed');
+	test('the host reveals votes, changing the voting state', () => {
+		const state = revealVotes(votingRoom(), 'host');
+		expect(state.votingState).toBe('revealed');
 	});
 
 	test('start_round clears every vote and enters voting', () => {
-		let state = seededRoom();
+		let state = votingRoom();
 		state = castVote(state, 'host', ESTIMATE);
 		state = castVote(state, 'guest', ESTIMATE);
 		expect(state.participants.every((p) => p.vote !== null)).toBe(true);
 
 		state = startRound(state, 'host');
-		expect(state.phase).toBe('voting');
+		expect(state.votingState).toBe('voting');
 		expect(state.participants.every((p) => p.vote === null)).toBe(true);
+	});
+
+	test('start_round is ignored before a topic is set', () => {
+		const before = seededRoom();
+		const after = startRound(before, 'host');
+		expect(after).toBe(before);
+	});
+
+	test('the current topic cannot be edited once voting has started', () => {
+		const before = votingRoom();
+		const after = setTicket(before, 'host', 'PAY-9999');
+		expect(after).toBe(before);
+	});
+
+	test('revealed topic cannot be cleared before it is archived', () => {
+		let state = revealedRoom();
+		state = setTicket(state, 'host', '');
+		state = doneTicket(state, 'host');
+		expect(state.completedRounds[0]?.ticketTitle).toBe('PAY-1842');
+		expect(state.completedRounds[0]?.votes).toHaveLength(2);
+	});
+
+	test('done_ticket archives the revealed topic result', () => {
+		const state = doneTicket(revealedRoom(), 'host');
+		expect(state.votingState).toBe('completed');
+		expect(state.ticketTitle).toBe('');
+		expect(state.participants.every((p) => p.vote === null)).toBe(true);
+		expect(state.completedRounds).toEqual([
+			{
+				ticketTitle: 'PAY-1842',
+				votes: [
+					{ participantId: 'host', participantName: 'Host', vote: ESTIMATE },
+					{ participantId: 'guest', participantName: 'Guest', vote: ESTIMATE },
+				],
+			},
+		]);
+	});
+
+	test('revealed votes cannot be cleared before they are archived', () => {
+		let state = revealedRoom();
+		state = clearVote(state, 'guest');
+		state = doneTicket(state, 'host');
+		expect(state.completedRounds[0]?.votes).toEqual([
+			{ participantId: 'host', participantName: 'Host', vote: ESTIMATE },
+			{ participantId: 'guest', participantName: 'Guest', vote: ESTIMATE },
+		]);
+	});
+
+	test('a completed topic can be followed by a new voting topic', () => {
+		let state = doneTicket(revealedRoom(), 'host');
+		state = setTicket(state, 'host', 'PAY-9999');
+		expect(state.votingState).toBe('ready');
+		expect(state.ticketTitle).toBe('PAY-9999');
+
+		state = startRound(state, 'host');
+		expect(state.votingState).toBe('voting');
+		expect(state.completedRounds).toHaveLength(1);
+	});
+
+	test('completed topic history keeps only the most recent rounds', () => {
+		let state = seededRoom();
+
+		for (let index = 0; index < MAX_COMPLETED_ROUNDS + 2; index += 1) {
+			state = setTicket(state, 'host', `PAY-${index}`);
+			state = startRound(state, 'host');
+			state = castVote(state, 'host', ESTIMATE);
+			state = revealVotes(state, 'host');
+			state = doneTicket(state, 'host');
+		}
+
+		expect(state.completedRounds).toHaveLength(MAX_COMPLETED_ROUNDS);
+		expect(state.completedRounds[0]?.ticketTitle).toBe('PAY-2');
+		expect(state.completedRounds.at(-1)?.ticketTitle).toBe(
+			`PAY-${MAX_COMPLETED_ROUNDS + 1}`,
+		);
 	});
 
 	test('a non-host cannot start a round', () => {
@@ -124,11 +215,20 @@ describe('host-guarded transitions', () => {
 });
 
 describe('voting transitions', () => {
-	test('casting a vote moves the room into the voting phase', () => {
+	test('casting a vote keeps the current topic in the voting state', () => {
 		let state = joinRoom(room(), { id: 'p1', name: 'Alice' });
+		state = setTicket(state, 'p1', 'PAY-1842');
+		state = startRound(state, 'p1');
 		state = castVote(state, 'p1', ESTIMATE);
-		expect(state.phase).toBe('voting');
+		expect(state.votingState).toBe('voting');
 		expect(state.participants[0].vote).toEqual(ESTIMATE);
+	});
+
+	test('casting a vote is ignored before voting starts', () => {
+		let state = joinRoom(room(), { id: 'p1', name: 'Alice' });
+		state = setTicket(state, 'p1', 'PAY-1842');
+		const after = castVote(state, 'p1', ESTIMATE);
+		expect(after).toBe(state);
 	});
 
 	test('clearing a vote resets only that participant', () => {
@@ -165,9 +265,9 @@ describe('toRoomStateView', () => {
 		const view = toRoomStateView(state);
 		expect(view).toEqual({
 			roomId: 'ROOM1',
+			roomState: 'active',
+			votingState: 'noTopic',
 			ticketTitle: '',
-			phase: 'lobby',
-			countdownValue: null,
 			participants: [
 				{
 					id: 'host',
@@ -186,12 +286,15 @@ describe('toRoomStateView', () => {
 					isHost: false,
 				},
 			],
+			completedRounds: [],
 		});
 	});
 
 	test('redacts other participants raw votes before reveal', () => {
 		let state = joinRoom(room(), { id: 'host', name: 'Host' });
 		state = joinRoom(state, { id: 'guest', name: 'Guest' });
+		state = setTicket(state, 'host', 'PAY-1842');
+		state = startRound(state, 'host');
 		state = castVote(state, 'host', ESTIMATE);
 		state = castVote(state, 'guest', {
 			kind: 'estimate',
@@ -221,6 +324,8 @@ describe('toRoomStateView', () => {
 	test('keeps all raw votes after reveal', () => {
 		let state = joinRoom(room(), { id: 'host', name: 'Host' });
 		state = joinRoom(state, { id: 'guest', name: 'Guest' });
+		state = setTicket(state, 'host', 'PAY-1842');
+		state = startRound(state, 'host');
 		state = castVote(state, 'host', ESTIMATE);
 		state = castVote(state, 'guest', {
 			kind: 'estimate',

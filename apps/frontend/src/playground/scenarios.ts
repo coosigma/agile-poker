@@ -1,7 +1,7 @@
 /**
  * Playground scenarios for the poker room WebSocket domain.
  *
- * Each scenario seeds a {@link MockRoomServer} into a chosen phase with staged
+ * Each scenario seeds a {@link MockRoomServer} into a chosen voting state with staged
  * participants, then the previewed "You" client connects live via the mock
  * socket and `RoomScreen` renders the resulting state. Seed scripts obey the
  * real reducer's rules (host-only actions come from the seeded host).

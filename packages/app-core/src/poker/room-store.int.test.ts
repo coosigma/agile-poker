@@ -103,17 +103,29 @@ describe('RoomStore.update atomicity', () => {
 		const runtime = makeRoomRuntime(createRoomState('RT'));
 		const size = 40;
 
+		await runtime.runPromise(
+			applyMessage('p0', {
+				type: 'join_room',
+				roomId: 'RT',
+				name: 'P0',
+				claimHost: true,
+			}),
+		);
 		await Promise.all(
-			Array.from({ length: size }, (_v, i) =>
+			Array.from({ length: size - 1 }, (_v, i) =>
 				runtime.runPromise(
-					applyMessage(`p${i}`, {
+					applyMessage(`p${i + 1}`, {
 						type: 'join_room',
 						roomId: 'RT',
-						name: `P${i}`,
+						name: `P${i + 1}`,
 					}),
 				),
 			),
 		);
+		await runtime.runPromise(
+			applyMessage('p0', { type: 'set_ticket', ticketTitle: 'PAY-1842' }),
+		);
+		await runtime.runPromise(applyMessage('p0', { type: 'start_round' }));
 		await Promise.all(
 			Array.from({ length: size }, (_v, i) =>
 				runtime.runPromise(

@@ -1,4 +1,4 @@
-import type { Participant, RoomPhase } from '../types';
+import type { Participant, VotingMachineState } from '../types';
 import { voteNumericValue } from './poker';
 
 export interface ScoreboardStats {
@@ -10,9 +10,9 @@ export interface ScoreboardStats {
 
 export function computeScoreboardStats(
 	participants: readonly Participant[],
-	phase: RoomPhase | undefined,
+	votingState: VotingMachineState | undefined,
 ): ScoreboardStats {
-	const revealed = phase === 'revealed';
+	const revealed = votingState === 'revealed';
 	const numericVotes: number[] = [];
 	let totalVotes = 0;
 

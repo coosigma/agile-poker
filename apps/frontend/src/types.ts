@@ -14,10 +14,10 @@ export type {
 	NumericCardValue,
 	SpecialCardValue,
 	VoteModifier,
-	RoomPhase,
 	VoteChoice,
 	ClientMessage,
 	ServerMessage,
 	ParticipantView as Participant,
 	RoomStateView as RoomState,
 } from '@agile-poker/app-core/poker';
+export type { VotingMachineState } from '@agile-poker/app-core/poker/voting-machine';
