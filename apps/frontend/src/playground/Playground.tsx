@@ -67,12 +67,16 @@ export function Playground() {
 		const server = buildScenarioServer(scenario);
 		serverRef.current = server;
 		setSimPlayers([]);
+		const unsubscribe = server.subscribe(() => {
+			setSimPlayers(server.simulatedPlayers());
+		});
 		installMockRoomSocket(server);
 		if (scenario.selfIsHost) {
 			setRoomIntent(PLAYGROUND_ROOM_ID, 'create');
 		} else {
 			clearRoomIntent();
 		}
+		return unsubscribe;
 	}, [scenario]);
 
 	function addPlayer(): void {

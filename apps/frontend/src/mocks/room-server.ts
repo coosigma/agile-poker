@@ -24,6 +24,7 @@ import {
 } from '@agile-poker/app-core/poker';
 
 type Emit = (frame: ServerMessage) => void;
+type StateListener = () => void;
 
 export interface MockServerConnection {
 	send(message: ClientMessage): void;
@@ -42,6 +43,7 @@ const SIM_VOTE_BASES = ['1', '2', '3', '5', '8', '13'] as const;
 export class MockRoomServer {
 	private state: RoomState;
 	private readonly live = new Map<string, Emit>();
+	private readonly listeners = new Set<StateListener>();
 	private counter = 0;
 	private readonly sims = new Map<string, string>();
 	private simCounter = 0;
@@ -124,6 +126,13 @@ export class MockRoomServer {
 		);
 	}
 
+	subscribe(listener: StateListener): () => void {
+		this.listeners.add(listener);
+		return () => {
+			this.listeners.delete(listener);
+		};
+	}
+
 	private voteByParticipantId(): Map<string, VoteChoice | null> {
 		return new Map(
 			this.state.participants.map((participant) => [
@@ -191,6 +200,9 @@ export class MockRoomServer {
 				state: redactRoomStateViewForParticipant(view, id),
 				selfId: id,
 			});
+		}
+		for (const listener of this.listeners) {
+			listener();
 		}
 	}
 }
