@@ -20,9 +20,11 @@ import {
 	type ClientMessage,
 	type RoomState,
 	type ServerMessage,
+	type VoteChoice,
 } from '@agile-poker/app-core/poker';
 
 type Emit = (frame: ServerMessage) => void;
+type StateListener = () => void;
 
 export interface MockServerConnection {
 	send(message: ClientMessage): void;
@@ -32,6 +34,7 @@ export interface MockServerConnection {
 export interface SimulatedPlayer {
 	readonly id: string;
 	readonly name: string;
+	readonly vote: VoteChoice | null;
 }
 
 /** Estimates a simulated player casts when it joins an active voting round. */
@@ -40,6 +43,7 @@ const SIM_VOTE_BASES = ['1', '2', '3', '5', '8', '13'] as const;
 export class MockRoomServer {
 	private state: RoomState;
 	private readonly live = new Map<string, Emit>();
+	private readonly listeners = new Set<StateListener>();
 	private counter = 0;
 	private readonly sims = new Map<string, string>();
 	private simCounter = 0;
@@ -74,7 +78,23 @@ export class MockRoomServer {
 		}
 		this.sims.set(id, displayName);
 		this.broadcast();
-		return { id, name: displayName };
+		return this.simulatedPlayer(id, displayName, this.voteByParticipantId());
+	}
+
+	voteAsSimulatedPlayer(id: string, vote: VoteChoice): void {
+		if (!this.sims.has(id)) {
+			return;
+		}
+		this.state = applyClientMessage(this.state, id, { type: 'vote', vote });
+		this.broadcast();
+	}
+
+	clearSimulatedPlayerVote(id: string): void {
+		if (!this.sims.has(id)) {
+			return;
+		}
+		this.state = applyClientMessage(this.state, id, { type: 'clear_vote' });
+		this.broadcast();
 	}
 
 	/** Remove a previously simulated participant and broadcast the update. */
@@ -100,7 +120,38 @@ export class MockRoomServer {
 
 	/** Snapshot of the simulated participants this server currently holds. */
 	simulatedPlayers(): SimulatedPlayer[] {
-		return [...this.sims].map(([id, name]) => ({ id, name }));
+		const votes = this.voteByParticipantId();
+		return [...this.sims].map(([id, name]) =>
+			this.simulatedPlayer(id, name, votes),
+		);
+	}
+
+	subscribe(listener: StateListener): () => void {
+		this.listeners.add(listener);
+		return () => {
+			this.listeners.delete(listener);
+		};
+	}
+
+	private voteByParticipantId(): Map<string, VoteChoice | null> {
+		return new Map(
+			this.state.participants.map((participant) => [
+				participant.id,
+				participant.vote,
+			]),
+		);
+	}
+
+	private simulatedPlayer(
+		id: string,
+		name: string,
+		votes: ReadonlyMap<string, VoteChoice | null>,
+	): SimulatedPlayer {
+		return {
+			id,
+			name,
+			vote: votes.get(id) ?? null,
+		};
 	}
 
 	/**
@@ -149,6 +200,9 @@ export class MockRoomServer {
 				state: redactRoomStateViewForParticipant(view, id),
 				selfId: id,
 			});
+		}
+		for (const listener of this.listeners) {
+			listener();
 		}
 	}
 }
