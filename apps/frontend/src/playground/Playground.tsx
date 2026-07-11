@@ -212,6 +212,7 @@ export function Playground() {
 										</div>
 										<div
 											className="playground-sim-vote-actions"
+											role="group"
 											aria-label={`Vote as ${player.name}`}
 										>
 											{NUMERIC_CARD_VALUES.map((base) => (

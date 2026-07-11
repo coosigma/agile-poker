@@ -76,7 +76,7 @@ export class MockRoomServer {
 		}
 		this.sims.set(id, displayName);
 		this.broadcast();
-		return { id, name: displayName, vote: null };
+		return this.simulatedPlayer(id, displayName, this.voteByParticipantId());
 	}
 
 	voteAsSimulatedPlayer(id: string, vote: VoteChoice): void {
@@ -118,13 +118,31 @@ export class MockRoomServer {
 
 	/** Snapshot of the simulated participants this server currently holds. */
 	simulatedPlayers(): SimulatedPlayer[] {
-		return [...this.sims].map(([id, name]) => ({
+		const votes = this.voteByParticipantId();
+		return [...this.sims].map(([id, name]) =>
+			this.simulatedPlayer(id, name, votes),
+		);
+	}
+
+	private voteByParticipantId(): Map<string, VoteChoice | null> {
+		return new Map(
+			this.state.participants.map((participant) => [
+				participant.id,
+				participant.vote,
+			]),
+		);
+	}
+
+	private simulatedPlayer(
+		id: string,
+		name: string,
+		votes: ReadonlyMap<string, VoteChoice | null>,
+	): SimulatedPlayer {
+		return {
 			id,
 			name,
-			vote:
-				this.state.participants.find((participant) => participant.id === id)
-					?.vote ?? null,
-		}));
+			vote: votes.get(id) ?? null,
+		};
 	}
 
 	/**
