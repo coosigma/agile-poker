@@ -9,10 +9,15 @@
  */
 import { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { getInitialLanguage, type Language } from '../lib/i18n';
-import { clearRoomIntent, setRoomIntent } from '../lib/poker';
+import { clearRoomIntent, setRoomIntent, voteLabel } from '../lib/poker';
 import { installMockRoomSocket } from '../mocks/mock-room-socket';
 import type { MockRoomServer, SimulatedPlayer } from '../mocks/room-server';
 import { RoomScreen } from '../screens/RoomScreen';
+import {
+	NUMERIC_CARD_VALUES,
+	SPECIAL_CARD_VALUES,
+	type VoteChoice,
+} from '../types';
 import {
 	PLAYGROUND_ROOM_ID,
 	YOU_NAME,
@@ -108,6 +113,24 @@ export function Playground() {
 		setSimPlayers([]);
 	}
 
+	function voteAsPlayer(id: string, vote: VoteChoice): void {
+		const server = serverRef.current;
+		if (!server) {
+			return;
+		}
+		server.voteAsSimulatedPlayer(id, vote);
+		setSimPlayers(server.simulatedPlayers());
+	}
+
+	function clearPlayerVote(id: string): void {
+		const server = serverRef.current;
+		if (!server) {
+			return;
+		}
+		server.clearSimulatedPlayerVote(id);
+		setSimPlayers(server.simulatedPlayers());
+	}
+
 	return (
 		<div className="playground-shell">
 			<aside className="playground-sidebar">
@@ -140,7 +163,7 @@ export function Playground() {
 					<h2 className="playground-simulate-title">Simulate players</h2>
 					<p className="playground-hint">
 						Add or remove participants live and watch the round-table seating
-						redistribute. Newcomers auto-vote while a round is in progress.
+						redistribute. Use each player’s cards to drive votes manually.
 					</p>
 					<div className="playground-simulate-actions">
 						<button
@@ -177,7 +200,60 @@ export function Playground() {
 						<ul className="playground-sim-list">
 							{simPlayers.map((player) => (
 								<li key={player.id} className="playground-sim-item">
-									<span className="playground-sim-name">{player.name}</span>
+									<div className="playground-sim-player">
+										<div className="playground-sim-row">
+											<span className="playground-sim-name">{player.name}</span>
+											<span
+												className="playground-sim-vote"
+												data-testid={`sim-vote-${player.id}`}
+											>
+												{voteLabel(player.vote, language)}
+											</span>
+										</div>
+										<div
+											className="playground-sim-vote-actions"
+											aria-label={`Vote as ${player.name}`}
+										>
+											{NUMERIC_CARD_VALUES.map((base) => (
+												<button
+													key={base}
+													type="button"
+													className="playground-sim-vote-button"
+													onClick={() =>
+														voteAsPlayer(player.id, {
+															kind: 'estimate',
+															base,
+															modifier: 'base',
+														})
+													}
+												>
+													{base}
+												</button>
+											))}
+											{SPECIAL_CARD_VALUES.map((value) => (
+												<button
+													key={value}
+													type="button"
+													className="playground-sim-vote-button"
+													onClick={() =>
+														voteAsPlayer(player.id, {
+															kind: 'special',
+															value,
+														})
+													}
+												>
+													{value}
+												</button>
+											))}
+											<button
+												type="button"
+												className="playground-sim-vote-button is-clear"
+												onClick={() => clearPlayerVote(player.id)}
+											>
+												Clear
+											</button>
+										</div>
+									</div>
 									<button
 										type="button"
 										className="playground-sim-remove"

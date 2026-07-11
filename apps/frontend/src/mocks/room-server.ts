@@ -20,6 +20,7 @@ import {
 	type ClientMessage,
 	type RoomState,
 	type ServerMessage,
+	type VoteChoice,
 } from '@agile-poker/app-core/poker';
 
 type Emit = (frame: ServerMessage) => void;
@@ -32,6 +33,7 @@ export interface MockServerConnection {
 export interface SimulatedPlayer {
 	readonly id: string;
 	readonly name: string;
+	readonly vote: VoteChoice | null;
 }
 
 /** Estimates a simulated player casts when it joins an active voting round. */
@@ -74,7 +76,23 @@ export class MockRoomServer {
 		}
 		this.sims.set(id, displayName);
 		this.broadcast();
-		return { id, name: displayName };
+		return { id, name: displayName, vote: null };
+	}
+
+	voteAsSimulatedPlayer(id: string, vote: VoteChoice): void {
+		if (!this.sims.has(id)) {
+			return;
+		}
+		this.state = applyClientMessage(this.state, id, { type: 'vote', vote });
+		this.broadcast();
+	}
+
+	clearSimulatedPlayerVote(id: string): void {
+		if (!this.sims.has(id)) {
+			return;
+		}
+		this.state = applyClientMessage(this.state, id, { type: 'clear_vote' });
+		this.broadcast();
 	}
 
 	/** Remove a previously simulated participant and broadcast the update. */
@@ -100,7 +118,13 @@ export class MockRoomServer {
 
 	/** Snapshot of the simulated participants this server currently holds. */
 	simulatedPlayers(): SimulatedPlayer[] {
-		return [...this.sims].map(([id, name]) => ({ id, name }));
+		return [...this.sims].map(([id, name]) => ({
+			id,
+			name,
+			vote:
+				this.state.participants.find((participant) => participant.id === id)
+					?.vote ?? null,
+		}));
 	}
 
 	/**
