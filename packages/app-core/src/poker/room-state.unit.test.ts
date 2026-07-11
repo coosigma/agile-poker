@@ -138,6 +138,20 @@ describe('host-guarded transitions', () => {
 		expect(after).toBe(before);
 	});
 
+	test('the current topic cannot be edited once voting has started', () => {
+		const before = votingRoom();
+		const after = setTicket(before, 'host', 'PAY-9999');
+		expect(after).toBe(before);
+	});
+
+	test('revealed topic cannot be cleared before it is archived', () => {
+		let state = revealedRoom();
+		state = setTicket(state, 'host', '');
+		state = doneTicket(state, 'host');
+		expect(state.completedRounds[0]?.ticketTitle).toBe('PAY-1842');
+		expect(state.completedRounds[0]?.votes).toHaveLength(2);
+	});
+
 	test('done_ticket archives the revealed topic result', () => {
 		const state = doneTicket(revealedRoom(), 'host');
 		expect(state.votingState).toBe('completed');

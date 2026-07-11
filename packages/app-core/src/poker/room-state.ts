@@ -137,6 +137,13 @@ export function setTicket(
 	if (id !== state.hostId) {
 		return state;
 	}
+	if (
+		state.votingState !== 'noTopic' &&
+		state.votingState !== 'ready' &&
+		state.votingState !== 'completed'
+	) {
+		return state;
+	}
 	const nextTitle = ticketTitle || '';
 	const nextVotingState = transitionVotingState(state.votingState, {
 		type: nextTitle ? 'SET_TOPIC' : 'CLEAR_TOPIC',

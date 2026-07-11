@@ -87,7 +87,11 @@ export function RoomScreen({
 	const ticketDraftValue = ticketDraft.trim();
 	const hasUnsavedTicketChange = ticketDraftValue !== savedTicketTitle;
 	const hasSavedTicket = Boolean(savedTicketTitle.trim());
-	const canUpdateTicket = Boolean(state) && hasUnsavedTicketChange;
+	const canEditTicket =
+		state?.votingState === 'noTopic' ||
+		state?.votingState === 'ready' ||
+		state?.votingState === 'completed';
+	const canUpdateTicket = canEditTicket && hasUnsavedTicketChange;
 	const canStartRound =
 		Boolean(state) &&
 		(state?.votingState === 'noTopic' ||
