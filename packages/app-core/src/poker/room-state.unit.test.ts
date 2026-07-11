@@ -154,6 +154,16 @@ describe('host-guarded transitions', () => {
 		]);
 	});
 
+	test('revealed votes cannot be cleared before they are archived', () => {
+		let state = revealedRoom();
+		state = clearVote(state, 'guest');
+		state = doneTicket(state, 'host');
+		expect(state.completedRounds[0]?.votes).toEqual([
+			{ participantId: 'host', participantName: 'Host', vote: ESTIMATE },
+			{ participantId: 'guest', participantName: 'Guest', vote: ESTIMATE },
+		]);
+	});
+
 	test('a completed topic can be followed by a new voting topic', () => {
 		let state = doneTicket(revealedRoom(), 'host');
 		state = setTicket(state, 'host', 'PAY-9999');

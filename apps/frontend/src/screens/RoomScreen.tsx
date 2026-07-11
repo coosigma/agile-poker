@@ -544,6 +544,7 @@ export function RoomScreen({
 						<button
 							className="vote-card clear-card"
 							type="button"
+							disabled={state?.votingState !== 'voting'}
 							onClick={() => sendMessage({ type: 'clear_vote' })}
 						>
 							{copy.clearVote}

@@ -167,6 +167,9 @@ export function castVote(
 }
 
 export function clearVote(state: RoomState, id: string): RoomState {
+	if (state.votingState !== 'voting') {
+		return state;
+	}
 	return replaceParticipant(state, id, (p) => ({ ...p, vote: null }));
 }
 
