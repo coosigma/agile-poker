@@ -226,6 +226,7 @@ h2 {
 }
 
 .host-ticket-form {
+	position: relative;
 	margin-top: 10px;
 }
 
@@ -244,6 +245,29 @@ h2 {
 	height: 44px;
 	padding-top: 0;
 	padding-bottom: 0;
+}
+
+.ticket-input-label input[readonly] {
+	cursor: not-allowed;
+	opacity: 0.72;
+}
+
+.ticket-lock-notice {
+	position: absolute;
+	top: calc(100% + 8px);
+	left: 0;
+	z-index: 5;
+	max-width: 100%;
+	margin: 0;
+	padding: 8px 10px;
+	border-radius: 10px;
+	background: rgba(12, 16, 28, 0.98);
+	box-shadow:
+		0 10px 24px rgba(0, 0, 0, 0.28),
+		inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+	color: #eef7ff;
+	font-size: 0.78rem;
+	line-height: 1.35;
 }
 
 .ticket-submit-button {
@@ -387,6 +411,10 @@ h2 {
 		background 180ms ease,
 		box-shadow 180ms ease,
 		color 180ms ease;
+}
+
+.control-pad-center:disabled {
+	pointer-events: none;
 }
 
 .control-pad-center.pending {
@@ -762,8 +790,13 @@ input {
 	gap: 12px;
 }
 
+.panel-header {
+	min-height: 30px;
+}
+
 .panel-header h3 {
 	font-size: 1rem;
+	line-height: 1;
 }
 
 .ticket-history-actions {
@@ -823,7 +856,7 @@ input {
 .badge {
 	background: var(--accent-strong);
 	color: #121722;
-	font-size: 0.82rem;
+	font-size: 0.76rem;
 	font-weight: 700;
 }
 
@@ -833,11 +866,10 @@ input {
 }
 
 .self-role-menu {
-	position: absolute;
-	top: 50%;
-	right: 12px;
+	position: relative;
+	flex: 0 0 auto;
+	order: 3;
 	display: block;
-	transform: translateY(-50%);
 }
 
 .role-inline-button {
@@ -848,15 +880,33 @@ input {
 }
 
 .self-role-menu summary {
-	display: grid;
-	place-items: center;
-	width: 34px;
-	height: 34px;
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 4px 7px;
 	border-radius: 999px;
-	background: rgba(255, 255, 255, 0.07);
-	color: #eef7ff;
+	color: var(--text-muted);
+	font-size: 0.72rem;
 	list-style: none;
 	cursor: pointer;
+}
+
+.self-role-menu summary::after {
+	content: '▾';
+	font-size: 0.64rem;
+}
+
+.self-role-menu summary:hover {
+	background: rgba(255, 255, 255, 0.06);
+	color: #eef7ff;
+}
+
+.self-role-menu summary span {
+	color: inherit;
+	font-size: inherit;
+	letter-spacing: 0.08em;
+	line-height: 1;
+	text-transform: uppercase;
 }
 
 .self-role-menu summary::-webkit-details-marker {
@@ -947,26 +997,46 @@ input {
 
 .meta-list {
 	display: grid;
-	gap: 10px;
-	margin-top: 10px;
+	gap: 8px;
+	margin-top: 8px;
+}
+
+.room-info-panel .meta-list {
+	margin-top: 12px;
 }
 
 .meta-list > div {
 	position: relative;
-	padding: 14px 16px;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+	padding: 10px 14px;
+	border: 1px solid rgba(255, 255, 255, 0.07);
 	border-radius: 14px;
 	background: var(--panel-soft);
 }
 
 .meta-list span {
 	display: block;
+	flex: 0 1 auto;
+	order: 3;
 	color: var(--text-muted);
-	font-size: 0.88rem;
+	font-size: 0.68rem;
+	letter-spacing: 0.08em;
+	line-height: 1;
+	text-transform: uppercase;
+	text-align: right;
 }
 
 .meta-list strong {
 	display: block;
-	margin-top: 4px;
+	flex: 1 1 auto;
+	min-width: 0;
+	margin-top: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .completed-rounds-panel {

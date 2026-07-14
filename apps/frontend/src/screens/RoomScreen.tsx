@@ -45,8 +45,9 @@ export function RoomScreen({
 	const [ticketDraft, setTicketDraft] = useState('');
 	const [modifier, setModifier] = useState<VoteModifier>('base');
 	const [pendingControl, setPendingControl] = useState<
-		'reset' | 'reveal' | 'done' | null
+		'reset' | 'reveal' | null
 	>(null);
+	const [showTicketLockedNotice, setShowTicketLockedNotice] = useState(false);
 	const [now, setNow] = useState(() => Date.now());
 	const [ticketHistoryIndex, setTicketHistoryIndex] = useState(0);
 
@@ -109,6 +110,8 @@ export function RoomScreen({
 		state?.votingState === 'noTopic' ||
 		state?.votingState === 'ready' ||
 		state?.votingState === 'completed';
+	const isTicketLockedUntilDone =
+		state?.votingState === 'countdown' || state?.votingState === 'revealed';
 	const canUpdateTicket = canEditTicket && hasUnsavedTicketChange;
 	const canStartRound =
 		Boolean(state) &&
@@ -154,16 +157,24 @@ export function RoomScreen({
 	useEffect(() => {
 		if (
 			(pendingControl === 'reset' && !canResetRound) ||
-			(pendingControl === 'reveal' && !canRevealVotes) ||
-			(pendingControl === 'done' && !canDoneTicket)
+			(pendingControl === 'reveal' && !canRevealVotes)
 		) {
 			setPendingControl(null);
 		}
-	}, [canDoneTicket, canResetRound, canRevealVotes, pendingControl]);
+	}, [canResetRound, canRevealVotes, pendingControl]);
+
+	useEffect(() => {
+		if (!isTicketLockedUntilDone) {
+			setShowTicketLockedNotice(false);
+		}
+	}, [isTicketLockedUntilDone]);
 
 	const handleTicketSubmit = (event: FormEvent) => {
 		event.preventDefault();
 		if (!canUpdateTicket) {
+			if (isTicketLockedUntilDone) {
+				setShowTicketLockedNotice(true);
+			}
 			return;
 		}
 		sendMessage({ type: 'set_ticket', ticketTitle: ticketDraftValue });
@@ -197,7 +208,7 @@ export function RoomScreen({
 		if (!canDoneTicket) {
 			return;
 		}
-		setPendingControl('done');
+		sendMessage({ type: 'done_ticket' });
 	};
 
 	const handleConfirmControl = () => {
@@ -206,9 +217,6 @@ export function RoomScreen({
 		}
 		if (pendingControl === 'reveal' && canRevealVotes) {
 			sendMessage({ type: 'reveal_votes' });
-		}
-		if (pendingControl === 'done' && canDoneTicket) {
-			sendMessage({ type: 'done_ticket' });
 		}
 		setPendingControl(null);
 	};
@@ -228,11 +236,7 @@ export function RoomScreen({
 	}));
 
 	const confirmPrompt =
-		pendingControl === 'reset'
-			? copy.resetRoundConfirm
-			: pendingControl === 'done'
-				? copy.doneTicketConfirm
-				: null;
+		pendingControl === 'reset' ? copy.resetRoundConfirm : null;
 	const isPlayer = self?.role === 'player';
 	const canSubmitVote = isPlayer && state?.votingState === 'voting';
 	const ticketHistory = [...completedRounds].reverse();
@@ -371,6 +375,7 @@ export function RoomScreen({
 				<aside className="side-panel">
 					<RoomPanel
 						title={copy.roomInfo}
+						className="room-info-panel"
 						badge={
 							<span className="badge">
 								{connectedCount} {copy.connected}
@@ -394,7 +399,6 @@ export function RoomScreen({
 								</strong>
 							</div>
 							<div>
-								<span>{copy.myRole}</span>
 								<strong>
 									{[
 										isHost ? copy.host : null,
@@ -407,7 +411,9 @@ export function RoomScreen({
 								</strong>
 								{self ? (
 									<details className="self-role-menu">
-										<summary aria-label={copy.roleLabel}>✎</summary>
+										<summary aria-label={copy.roleLabel}>
+											<span>{copy.myRole}</span>
+										</summary>
 										<div className="self-role-menu-popover">
 											<button
 												type="button"
@@ -431,7 +437,9 @@ export function RoomScreen({
 											</button>
 										</div>
 									</details>
-								) : null}
+								) : (
+									<span>{copy.myRole}</span>
+								)}
 							</div>
 						</div>
 					</RoomPanel>
@@ -446,9 +454,24 @@ export function RoomScreen({
 									<label className="ticket-input-label">
 										<input
 											value={ticketDraft}
-											onChange={(event) => setTicketDraft(event.target.value)}
+											onChange={(event) => {
+												if (canEditTicket) {
+													setTicketDraft(event.target.value);
+												}
+											}}
+											onClick={() => {
+												if (isTicketLockedUntilDone) {
+													setShowTicketLockedNotice(true);
+												}
+											}}
+											onFocus={() => {
+												if (isTicketLockedUntilDone) {
+													setShowTicketLockedNotice(true);
+												}
+											}}
 											aria-label={copy.currentTicket}
 											placeholder={copy.ticketPlaceholder}
+											readOnly={!canEditTicket}
 											maxLength={40}
 										/>
 									</label>
@@ -461,6 +484,11 @@ export function RoomScreen({
 										✓
 									</button>
 								</div>
+								{showTicketLockedNotice ? (
+									<p className="ticket-lock-notice">
+										{copy.finishTicketBeforeEditing}
+									</p>
+								) : null}
 							</form>
 							<div className="control-pad" aria-label={copy.hostControls}>
 								<button

@@ -76,9 +76,7 @@ test('self role changes through the edit menu', async ({ page }) => {
 	});
 	await page.goto('/playground.html');
 
-	const roleRow = page
-		.locator('.meta-list > div')
-		.filter({ hasText: 'My role' });
+	const roleRow = page.locator('.meta-list > div').filter({ hasText: 'Role' });
 	await expect(roleRow).toContainText('Host · Observer');
 	await expect(page.locator('.host-board')).toContainText('Host');
 	await expect(page.locator('.host-card')).toHaveText('You');
@@ -177,8 +175,25 @@ test('playground shows a countdown before revealing votes', async ({
 	const countdown = page.getByTestId('reveal-countdown');
 	await expect(countdown).toBeVisible();
 	await expect(countdown).toContainText(/[123]/);
+	const ticketInput = page.getByLabel('Current ticket');
+	await expect(ticketInput).toHaveAttribute('readonly', '');
+	await ticketInput.click();
+	await expect(
+		page.getByText('Click Done to finish voting before editing.'),
+	).toBeVisible();
 	await expect(countdown).toBeHidden({ timeout: 4000 });
 	await expect(
 		page.getByRole('listitem').filter({ hasText: 'Sim 1' }),
 	).toContainText('1♭');
+
+	await expect(ticketInput).toHaveAttribute('readonly', '');
+	await ticketInput.click();
+	await expect(
+		page.getByText('Click Done to finish voting before editing.'),
+	).toBeVisible();
+
+	await page
+		.locator('.control-pad-done')
+		.evaluate((button: HTMLButtonElement) => button.click());
+	await expect(ticketInput).toHaveValue('');
 });
