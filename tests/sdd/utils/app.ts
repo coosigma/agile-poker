@@ -38,11 +38,11 @@ export async function forceEnglish(context: BrowserContext): Promise<void> {
 
 // --- room-screen locators ------------------------------------------------
 
-/** The `My role` badge on the room screen (`Host · Observer` / `Player`). */
+/** The `Role` badge on the room screen (`Host · Observer` / `Player`). */
 export function roleBadge(page: Page): Locator {
 	return page
 		.locator('.meta-list > div')
-		.filter({ hasText: 'My role' })
+		.filter({ hasText: 'Role' })
 		.locator('strong');
 }
 
@@ -50,10 +50,11 @@ export async function switchSelfRole(
 	page: Page,
 	role: 'Player' | 'Observer',
 ): Promise<void> {
+	await page.locator('.self-role-menu summary').click();
 	await page
-		.locator('.role-toggle')
+		.locator('.self-role-menu')
 		.getByRole('button', { name: role, exact: true })
-		.evaluate((button: HTMLButtonElement) => button.click());
+		.click();
 }
 
 /** The `Voted` counter on the room screen, e.g. `1/2`. */
@@ -118,6 +119,43 @@ export function revealButton(page: Page): Locator {
 
 export function confirmControlButton(page: Page): Locator {
 	return page.getByRole('button', { name: 'OK', exact: true });
+}
+
+export function doneButton(page: Page): Locator {
+	return page.getByRole('button', { name: 'Done', exact: true });
+}
+
+export function ticketHistoryPanel(page: Page): Locator {
+	return page.locator('.panel').filter({ hasText: 'Tickets history' });
+}
+
+export function ticketHistoryTitle(page: Page): Locator {
+	return ticketHistoryPanel(page)
+		.locator('.ticket-history-slide .completed-round-title > strong')
+		.first();
+}
+
+export function ticketHistoryStat(page: Page, label: string): Locator {
+	return ticketHistoryPanel(page)
+		.locator('.ticket-history-stats > div')
+		.filter({ hasText: label })
+		.locator('strong');
+}
+
+export function ticketHistorySelfVote(page: Page): Locator {
+	return ticketHistoryPanel(page).locator('.ticket-history-self-vote');
+}
+
+export function olderTicketButton(page: Page): Locator {
+	return ticketHistoryPanel(page).getByRole('button', {
+		name: 'Previous ticket',
+	});
+}
+
+export function newerTicketButton(page: Page): Locator {
+	return ticketHistoryPanel(page).getByRole('button', {
+		name: 'Next ticket',
+	});
 }
 
 /** The room's code shown in the room topbar heading, e.g. "ABC123". */
@@ -243,6 +281,7 @@ const CONTROL_PAD_WEDGE = {
 	start: { x: 92, y: 45 },
 	reset: { x: 45, y: 92 },
 	reveal: { x: 140, y: 92 },
+	done: { x: 92, y: 140 },
 } as const;
 
 /** Host clicks "Start" for a lobby round, or "Reset" for a voted round. */
@@ -266,10 +305,30 @@ export async function castNumericVote(
 	await numericCard(page, value).click();
 }
 
+export async function castNumericVoteWithModifier(
+	page: Page,
+	value: string,
+	modifier: 'Less' | 'Base' | 'More',
+): Promise<void> {
+	await page.getByRole('button', { name: modifier, exact: true }).click();
+	await castNumericVote(page, value);
+}
+
 /** Host reveals the votes. */
 export async function clickReveal(page: Page): Promise<void> {
 	await revealButton(page).click({ position: CONTROL_PAD_WEDGE.reveal });
 	await confirmControlButton(page).click();
+}
+
+export async function clickDone(page: Page): Promise<void> {
+	await expect(doneButton(page)).toBeEnabled();
+	await doneButton(page).click({ position: CONTROL_PAD_WEDGE.done });
+}
+
+export async function transferHostTo(page: Page, participantName: string) {
+	const participant = participantSeat(page, participantName);
+	await participant.locator('.seat-role-menu summary').click();
+	await participant.getByRole('button', { name: 'Make host' }).click();
 }
 
 export { expect };
