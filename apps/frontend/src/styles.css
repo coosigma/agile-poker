@@ -1158,6 +1158,7 @@ input {
 }
 
 .table-zone {
+	position: relative;
 	min-height: 0;
 	display: grid;
 	place-items: center;
@@ -1372,14 +1373,26 @@ input {
 	place-items: center;
 	width: calc(24px * var(--seat-scale));
 	height: calc(18px * var(--seat-scale));
-	padding: 0 0 calc(2px * var(--seat-scale));
+	padding: 0;
+	border: 0;
 	border-radius: 999px;
-	background: rgba(255, 255, 255, 0.07);
+	background: transparent;
 	color: #eef7ff;
 	font-size: calc(0.68rem * var(--seat-scale));
 	line-height: 1;
 	list-style: none;
 	cursor: pointer;
+}
+
+.seat-role-menu-icon {
+	width: calc(12px * var(--seat-scale));
+	height: calc(12px * var(--seat-scale));
+	fill: currentColor;
+	transform: translateY(calc(-1px * var(--seat-scale)));
+}
+
+.observer-card .seat-role-menu {
+	right: -1px;
 }
 
 .seat-role-menu summary::-webkit-details-marker {
@@ -1518,24 +1531,6 @@ input {
 
 .special-card {
 	min-height: 66px;
-}
-
-.vote-submit-button {
-	min-height: 0;
-	margin-top: 10px;
-	padding: 11px;
-	width: 100%;
-	background: linear-gradient(
-		135deg,
-		rgba(246, 178, 83, 0.28),
-		rgba(142, 199, 255, 0.16)
-	);
-	font-weight: 700;
-}
-
-.vote-submit-button:disabled {
-	color: var(--text-muted);
-	background: rgba(255, 255, 255, 0.04);
 }
 
 .clear-card {

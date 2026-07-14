@@ -60,18 +60,19 @@ test('observer sees vote cards but cannot submit votes', async ({ page }) => {
 		has: page.locator('span', { hasText: /^5$/ }),
 	});
 	await expect(voteCard).toBeVisible();
-	await expect(voteCard).toBeDisabled();
+	await expect(voteCard).toBeEnabled();
+	await voteCard.click();
+	await expect(voteCard).toHaveClass(/active/);
 	await expect(
 		page.locator('.meta-list > div').filter({ hasText: 'Voted' }),
 	).toContainText('0/0');
 	await expect(
 		page.locator('.panel').filter({ hasText: 'Vote cards' }).locator('.badge'),
 	).toHaveText('Disabled');
-	await expect(page.getByRole('button', { name: 'Submit' })).toBeDisabled();
 	await expect(page.getByText('Observers do not vote')).toHaveCount(0);
 });
 
-test('vote cards submit selected point and modifier together', async ({
+test('vote cards auto-submit selected point and modifier together', async ({
 	page,
 }) => {
 	await page.addInitScript(() => {
@@ -91,20 +92,32 @@ test('vote cards submit selected point and modifier together', async ({
 
 	const votePanel = page.locator('.panel').filter({ hasText: 'Vote cards' });
 	await expect(votePanel.locator('.badge')).toHaveText('Not voted');
-	await expect(page.getByRole('button', { name: 'Submit' })).toBeDisabled();
 
 	await page.getByRole('button', { name: 'More' }).click();
-	await expect(page.getByRole('button', { name: 'Submit' })).toBeDisabled();
+	await expect(votePanel.locator('.badge')).toHaveText('Not voted');
 	await page
 		.locator('.card-grid button')
 		.filter({
 			has: page.locator('span', { hasText: /^5$/ }),
 		})
 		.click();
-	await expect(votePanel.locator('.badge')).toHaveText('Not voted');
-
-	await page.getByRole('button', { name: 'Submit' }).click();
 	await expect(votePanel.locator('.badge')).toHaveText('5♯');
+
+	const revealButton = page.locator('.control-pad-reveal');
+	await expect(revealButton).toBeEnabled();
+	await revealButton.evaluate((button: HTMLButtonElement) => button.click());
+	await page.getByRole('button', { name: 'OK' }).click();
+	await page
+		.locator('.card-grid button')
+		.filter({
+			has: page.locator('span', { hasText: /^8$/ }),
+		})
+		.click();
+	await expect(votePanel.locator('.badge')).toHaveText('8♯');
+	await expect(page.getByTestId('reveal-countdown')).toBeHidden({
+		timeout: 4000,
+	});
+	await expect(page.locator('.host-player-card')).toContainText('8♯');
 });
 
 test('self role changes through the edit menu', async ({ page }) => {
@@ -149,6 +162,11 @@ test('host changes participant role through card menu', async ({ page }) => {
 		hasText: 'Sim 1',
 	});
 	await expect(playerCard).toBeVisible();
+	await playerCard.locator('.seat-role-menu summary').click();
+	await expect(page.locator('.seat-role-menu[open]')).toHaveCount(1);
+	await page.locator('.table-center').click();
+	await expect(page.locator('.seat-role-menu[open]')).toHaveCount(0);
+
 	await playerCard.locator('.seat-role-menu summary').click();
 	await playerCard.getByRole('button', { name: 'Make observer' }).click();
 	await expect(page.locator('.seat-role-menu[open]')).toHaveCount(0);
@@ -211,6 +229,9 @@ test('playground shows a countdown before revealing votes', async ({
 
 	const countdown = page.getByTestId('reveal-countdown');
 	await expect(countdown).toBeVisible();
+	await expect(
+		page.locator('main.table-zone > .countdown-overlay'),
+	).toBeVisible();
 	await expect(countdown).toContainText(/[123]/);
 	await expect(countdown).not.toContainText('Revealing');
 	const ticketInput = page.getByLabel('Current ticket');

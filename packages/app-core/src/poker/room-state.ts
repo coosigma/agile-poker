@@ -178,7 +178,7 @@ export function setTicket(
 	};
 }
 
-/** Casting a vote is only valid while the current topic is open for voting. */
+/** Casting a vote is valid while voting is open or the reveal countdown runs. */
 export function castVote(
 	state: RoomState,
 	id: string,
@@ -193,7 +193,11 @@ export function castVote(
 	const nextVotingState = transitionVotingState(state.votingState, {
 		type: 'VOTE',
 	});
-	if (nextVotingState === state.votingState && state.votingState !== 'voting') {
+	if (
+		nextVotingState === state.votingState &&
+		state.votingState !== 'voting' &&
+		state.votingState !== 'countdown'
+	) {
 		return state;
 	}
 	const withVote = replaceParticipant(state, id, (p) => ({

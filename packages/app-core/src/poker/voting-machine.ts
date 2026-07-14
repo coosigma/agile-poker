@@ -49,6 +49,7 @@ export const votingMachine = createMachine({
 		countdown: {
 			on: {
 				COUNTDOWN_DONE: 'revealed',
+				VOTE: 'countdown',
 			},
 		},
 		revealed: {

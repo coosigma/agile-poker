@@ -26,6 +26,7 @@ import {
 	type NumericCardValue,
 	type SpecialCardValue,
 	type VoteModifier,
+	type VoteChoice,
 } from '../types';
 
 interface RoomScreenProps {
@@ -57,6 +58,7 @@ export function RoomScreen({
 	const [showTicketLockedNotice, setShowTicketLockedNotice] = useState(false);
 	const [now, setNow] = useState(() => Date.now());
 	const [ticketHistoryIndex, setTicketHistoryIndex] = useState(0);
+	const submittedVoteKeyRef = useRef<string | null>(null);
 
 	// Seats are distributed by pixel arc length, which needs the table frame's
 	// aspect ratio (width / height). Measure it and keep it current on resize.
@@ -75,6 +77,26 @@ export function RoomScreen({
 		});
 		observer.observe(frame);
 		return () => observer.disconnect();
+	}, []);
+
+	useEffect(() => {
+		const closeSeatRoleMenus = (event: PointerEvent) => {
+			const target = event.target;
+			if (
+				target instanceof Element &&
+				target.closest('.seat-role-menu') !== null
+			) {
+				return;
+			}
+			document
+				.querySelectorAll<HTMLDetailsElement>('.seat-role-menu[open]')
+				.forEach((menu) => menu.removeAttribute('open'));
+		};
+
+		document.addEventListener('pointerdown', closeSeatRoleMenus);
+		return () => {
+			document.removeEventListener('pointerdown', closeSeatRoleMenus);
+		};
 	}, []);
 
 	useEffect(() => {
@@ -145,10 +167,15 @@ export function RoomScreen({
 
 	const stats = computeScoreboardStats(playerParticipants, state?.votingState);
 	const isPlayer = self?.role === 'player';
-	const canSubmitVote = isPlayer && state?.votingState === 'voting';
-	const canSubmitSelectedVote =
-		canSubmitVote &&
-		(selectedNumericVote !== null || selectedSpecialVote !== null);
+	const canSelectVoteCards =
+		state?.votingState === 'voting' || state?.votingState === 'countdown';
+	const canSubmitVote = isPlayer && canSelectVoteCards;
+	const selectedVote: VoteChoice | null = selectedSpecialVote
+		? { kind: 'special', value: selectedSpecialVote }
+		: selectedNumericVote !== null
+			? { kind: 'estimate', base: selectedNumericVote, modifier }
+			: null;
+	const selectedVoteKey = selectedVote ? voteKey(selectedVote) : null;
 
 	useEffect(() => {
 		if (!isRevealCountdown) {
@@ -182,11 +209,29 @@ export function RoomScreen({
 	}, [isTicketLockedUntilDone]);
 
 	useEffect(() => {
-		if (!canSubmitVote) {
+		if (!canSelectVoteCards) {
 			setSelectedNumericVote(null);
 			setSelectedSpecialVote(null);
 		}
-	}, [canSubmitVote]);
+	}, [canSelectVoteCards]);
+
+	useEffect(() => {
+		if (!canSubmitVote) {
+			submittedVoteKeyRef.current = null;
+			return;
+		}
+		if (!selectedVote || !selectedVoteKey) {
+			return;
+		}
+		if (submittedVoteKeyRef.current === selectedVoteKey) {
+			return;
+		}
+		submittedVoteKeyRef.current = selectedVoteKey;
+		sendMessage({
+			type: 'vote',
+			vote: selectedVote,
+		});
+	}, [canSubmitVote, selectedVote, selectedVoteKey, sendMessage]);
 
 	const handleTicketSubmit = (event: FormEvent) => {
 		event.preventDefault();
@@ -240,35 +285,10 @@ export function RoomScreen({
 		setPendingControl(null);
 	};
 
-	const handleSubmitVote = () => {
-		if (!canSubmitSelectedVote) {
-			return;
-		}
-		if (selectedSpecialVote) {
-			sendMessage({
-				type: 'vote',
-				vote: {
-					kind: 'special',
-					value: selectedSpecialVote,
-				},
-			});
-			return;
-		}
-		if (selectedNumericVote !== null) {
-			sendMessage({
-				type: 'vote',
-				vote: {
-					kind: 'estimate',
-					base: selectedNumericVote,
-					modifier,
-				},
-			});
-		}
-	};
-
 	const handleClearVote = () => {
 		setSelectedNumericVote(null);
 		setSelectedSpecialVote(null);
+		submittedVoteKeyRef.current = null;
 		sendMessage({ type: 'clear_vote' });
 	};
 
@@ -404,7 +424,18 @@ export function RoomScreen({
 		label: string,
 	) => (
 		<details className="seat-role-menu">
-			<summary aria-label={copy.roleLabel}>...</summary>
+			<summary aria-label={copy.roleLabel}>
+				<svg
+					className="seat-role-menu-icon"
+					viewBox="0 0 16 16"
+					aria-hidden="true"
+					focusable="false"
+				>
+					<circle cx="8" cy="3.5" r="1.4" />
+					<circle cx="8" cy="8" r="1.4" />
+					<circle cx="8" cy="12.5" r="1.4" />
+				</svg>
+			</summary>
 			<div className="seat-role-menu-popover">
 				<button
 					type="button"
@@ -758,19 +789,19 @@ export function RoomScreen({
 								</article>
 							))}
 						</div>
-						{revealCountdownSeconds !== null ? (
-							<div
-								className="countdown-overlay"
-								role="status"
-								aria-live="polite"
-								data-testid="reveal-countdown"
-							>
-								<div>
-									<span>{revealCountdownSeconds}</span>
-								</div>
-							</div>
-						) : null}
 					</div>
+					{revealCountdownSeconds !== null ? (
+						<div
+							className="countdown-overlay"
+							role="status"
+							aria-live="polite"
+							data-testid="reveal-countdown"
+						>
+							<div>
+								<span>{revealCountdownSeconds}</span>
+							</div>
+						</div>
+					) : null}
 				</main>
 
 				<aside className="side-panel">
@@ -824,7 +855,7 @@ export function RoomScreen({
 										key={value}
 										type="button"
 										className={`vote-card ${active ? 'active' : ''}`}
-										disabled={!canSubmitVote}
+										disabled={!canSelectVoteCards}
 										onClick={() => {
 											setSelectedNumericVote(value);
 											setSelectedSpecialVote(null);
@@ -843,7 +874,7 @@ export function RoomScreen({
 										key={value}
 										type="button"
 										className={`vote-card special-card ${active ? 'active' : ''}`}
-										disabled={!canSubmitVote}
+										disabled={!canSelectVoteCards}
 										onClick={() => {
 											setSelectedSpecialVote(value);
 											setSelectedNumericVote(null);
@@ -854,14 +885,6 @@ export function RoomScreen({
 								);
 							})}
 						</div>
-						<button
-							className="vote-card vote-submit-button"
-							type="button"
-							disabled={!canSubmitSelectedVote}
-							onClick={handleSubmitVote}
-						>
-							{copy.submitVote}
-						</button>
 						<button
 							className="vote-card clear-card"
 							type="button"
@@ -876,4 +899,10 @@ export function RoomScreen({
 			{error ? <p className="error-text center-text">{error}</p> : null}
 		</div>
 	);
+}
+
+function voteKey(vote: VoteChoice): string {
+	return vote.kind === 'special'
+		? `special:${vote.value}`
+		: `estimate:${vote.base}:${vote.modifier}`;
 }

@@ -143,6 +143,22 @@ describe('host-guarded transitions', () => {
 		expect(state.revealCountdownEndsAt).toBeNull();
 	});
 
+	test('players can update votes during the reveal countdown', () => {
+		let state = revealVotes(votingRoom(), 'host');
+		const updatedVote: VoteChoice = {
+			kind: 'estimate',
+			base: '8',
+			modifier: 'sharp',
+		};
+
+		state = castVote(state, 'guest', updatedVote);
+
+		expect(state.votingState).toBe('countdown');
+		expect(state.participants.find((p) => p.id === 'guest')?.vote).toEqual(
+			updatedVote,
+		);
+	});
+
 	test('start_round clears every vote and enters voting', () => {
 		let state = votingRoom();
 		state = castVote(state, 'host', ESTIMATE);
