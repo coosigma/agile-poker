@@ -1,6 +1,7 @@
 import {
 	type CSSProperties,
 	type FormEvent,
+	type MouseEvent,
 	useEffect,
 	useRef,
 	useState,
@@ -301,6 +302,9 @@ export function RoomScreen({
 			)}
 		</div>
 	);
+	const closeRoleMenu = (event: MouseEvent<HTMLButtonElement>) => {
+		event.currentTarget.closest('details')?.removeAttribute('open');
+	};
 	const roleMenu = (
 		participantId: string,
 		role: 'player' | 'observer',
@@ -311,13 +315,14 @@ export function RoomScreen({
 			<div className="seat-role-menu-popover">
 				<button
 					type="button"
-					onClick={() =>
+					onClick={(event) => {
+						closeRoleMenu(event);
 						sendMessage({
 							type: 'set_role',
 							participantId,
 							role,
-						})
-					}
+						});
+					}}
 				>
 					{label}
 				</button>
@@ -407,18 +412,20 @@ export function RoomScreen({
 											<button
 												type="button"
 												className={self.role === 'player' ? 'active' : ''}
-												onClick={() =>
-													sendMessage({ type: 'set_role', role: 'player' })
-												}
+												onClick={(event) => {
+													closeRoleMenu(event);
+													sendMessage({ type: 'set_role', role: 'player' });
+												}}
 											>
 												{copy.playerRole}
 											</button>
 											<button
 												type="button"
 												className={self.role === 'observer' ? 'active' : ''}
-												onClick={() =>
-													sendMessage({ type: 'set_role', role: 'observer' })
-												}
+												onClick={(event) => {
+													closeRoleMenu(event);
+													sendMessage({ type: 'set_role', role: 'observer' });
+												}}
 											>
 												{copy.observerRole}
 											</button>

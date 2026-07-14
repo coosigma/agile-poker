@@ -87,6 +87,7 @@ test('self role changes through the edit menu', async ({ page }) => {
 		.getByRole('button', { name: 'Player' })
 		.click();
 
+	await expect(page.locator('.self-role-menu')).not.toHaveAttribute('open', '');
 	await expect(roleRow).toContainText('Host · Player');
 	await expect(page.locator('.host-board')).toHaveCount(0);
 	await expect(page.locator('.host-player-card')).toContainText('You · Host');
@@ -111,6 +112,7 @@ test('host changes participant role through card menu', async ({ page }) => {
 	await expect(playerCard).toBeVisible();
 	await playerCard.locator('.seat-role-menu summary').click();
 	await playerCard.getByRole('button', { name: 'Make observer' }).click();
+	await expect(page.locator('.seat-role-menu[open]')).toHaveCount(0);
 
 	const observerCard = page.locator('.observer-bench .observer-card').filter({
 		hasText: 'Sim 1',
@@ -118,6 +120,7 @@ test('host changes participant role through card menu', async ({ page }) => {
 	await expect(observerCard).toBeVisible();
 	await observerCard.locator('.seat-role-menu summary').click();
 	await observerCard.getByRole('button', { name: 'Make player' }).click();
+	await expect(page.locator('.seat-role-menu[open]')).toHaveCount(0);
 
 	await expect(
 		page.locator('.table-frame > .seat-card').filter({ hasText: 'Sim 1' }),
