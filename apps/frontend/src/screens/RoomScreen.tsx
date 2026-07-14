@@ -666,13 +666,12 @@ export function RoomScreen({
 						title={copy.voteCards}
 						badge={
 							<span className="badge muted-badge">
-								{voteLabel(self?.vote ?? null, language)}
+								{self?.role === 'observer'
+									? copy.voteDisabled
+									: voteLabel(self?.vote ?? null, language)}
 							</span>
 						}
 					>
-						{self?.role === 'observer' ? (
-							<p className="empty-panel-copy">{copy.observerVoteHelp}</p>
-						) : null}
 						<div className="modifier-section">
 							<div className="modifier-header">
 								<strong>{copy.optionalModifier}</strong>

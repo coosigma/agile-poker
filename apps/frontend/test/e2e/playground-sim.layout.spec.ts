@@ -64,6 +64,10 @@ test('observer sees vote cards but cannot submit votes', async ({ page }) => {
 	await expect(
 		page.locator('.meta-list > div').filter({ hasText: 'Voted' }),
 	).toContainText('0/0');
+	await expect(
+		page.locator('.panel').filter({ hasText: 'Vote cards' }).locator('.badge'),
+	).toHaveText('Disabled');
+	await expect(page.getByText('Observers do not vote')).toHaveCount(0);
 });
 
 test('self role changes through the edit menu', async ({ page }) => {
