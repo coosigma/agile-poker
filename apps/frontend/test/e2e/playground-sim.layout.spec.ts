@@ -29,14 +29,19 @@ test('playground can add simulated observers off the table', async ({
 	});
 	await page.goto('/playground.html');
 
+	await expect(page.locator('.host-board')).toContainText('Host');
+	await expect(page.locator('.host-card')).toHaveText('You');
+	await expect(page.locator('.observer-bench .observer-card')).toHaveCount(0);
 	await page.getByRole('button', { name: 'Add observer' }).click();
 
 	await expect(page.getByTestId('sim-vote-sim-1')).toHaveText('Observer');
 	await expect(
-		page.locator('.observer-row').filter({ hasText: 'Observer 1' }),
+		page.locator('.observer-bench .observer-card').filter({
+			hasText: 'Observer 1',
+		}),
 	).toBeVisible();
 	await expect(
-		page.locator('.seat-card').filter({ hasText: 'Observer 1' }),
+		page.locator('.table-frame > .seat-card').filter({ hasText: 'Observer 1' }),
 	).toHaveCount(0);
 });
 
@@ -59,6 +64,64 @@ test('observer sees vote cards but cannot submit votes', async ({ page }) => {
 	await expect(
 		page.locator('.meta-list > div').filter({ hasText: 'Voted' }),
 	).toContainText('0/0');
+});
+
+test('self role changes through the edit menu', async ({ page }) => {
+	await page.addInitScript(() => {
+		window.localStorage.setItem('agile-poker:language', 'en');
+	});
+	await page.goto('/playground.html');
+
+	const roleRow = page
+		.locator('.meta-list > div')
+		.filter({ hasText: 'My role' });
+	await expect(roleRow).toContainText('Host · Observer');
+	await expect(page.locator('.host-board')).toContainText('Host');
+	await expect(page.locator('.host-card')).toHaveText('You');
+	await expect(
+		page.locator('.observer-bench .observer-card').filter({ hasText: 'You' }),
+	).toHaveCount(0);
+	await page.locator('.self-role-menu summary').click();
+	await page
+		.locator('.self-role-menu')
+		.getByRole('button', { name: 'Player' })
+		.click();
+
+	await expect(roleRow).toContainText('Host · Player');
+	await expect(page.locator('.host-board')).toHaveCount(0);
+	await expect(page.locator('.host-player-card')).toContainText('You · Host');
+	await expect(page.locator('.host-player-card')).toContainText('Not voted');
+	await expect(
+		page.locator('.table-frame > .seat-card:not(.host-player-card)').filter({
+			hasText: 'You',
+		}),
+	).toHaveCount(0);
+});
+
+test('host changes participant role through card menu', async ({ page }) => {
+	await page.addInitScript(() => {
+		window.localStorage.setItem('agile-poker:language', 'en');
+	});
+	await page.goto('/playground.html');
+
+	await page.getByRole('button', { name: 'Add player' }).click();
+	const playerCard = page.locator('.table-frame > .seat-card').filter({
+		hasText: 'Sim 1',
+	});
+	await expect(playerCard).toBeVisible();
+	await playerCard.locator('.seat-role-menu summary').click();
+	await playerCard.getByRole('button', { name: 'Make observer' }).click();
+
+	const observerCard = page.locator('.observer-bench .observer-card').filter({
+		hasText: 'Sim 1',
+	});
+	await expect(observerCard).toBeVisible();
+	await observerCard.locator('.seat-role-menu summary').click();
+	await observerCard.getByRole('button', { name: 'Make player' }).click();
+
+	await expect(
+		page.locator('.table-frame > .seat-card').filter({ hasText: 'Sim 1' }),
+	).toBeVisible();
 });
 
 test('playground simulated player votes stay in sync after host reset', async ({

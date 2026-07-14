@@ -793,6 +793,24 @@ input {
 	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
+.ticket-history {
+	display: grid;
+	gap: 10px;
+	margin-top: 14px;
+}
+
+.ticket-history-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+}
+
+.ticket-history-header strong {
+	color: #eef7ff;
+	font-size: 0.82rem;
+}
+
 .status-pill,
 .badge {
 	display: inline-flex;
@@ -814,52 +832,66 @@ input {
 	color: #fff;
 }
 
-.role-toggle {
-	display: grid;
-	grid-template-columns: repeat(2, minmax(0, 1fr));
-	gap: 8px;
-	margin-top: 14px;
+.self-role-menu {
+	position: absolute;
+	top: 50%;
+	right: 12px;
+	display: block;
+	transform: translateY(-50%);
 }
 
-.role-toggle-button,
-.role-inline-button,
-.seat-role-button {
+.role-inline-button {
 	border-radius: 999px;
 	background: rgba(255, 255, 255, 0.07);
 	color: #eef7ff;
 	font-size: 0.76rem;
 }
 
-.role-toggle-button {
-	padding: 8px 10px;
-}
-
-.role-toggle-button.active {
-	background: rgba(246, 178, 83, 0.2);
-	box-shadow: inset 0 0 0 1px rgba(246, 178, 83, 0.38);
-	color: var(--accent-strong);
-}
-
-.observer-list {
+.self-role-menu summary {
 	display: grid;
-	gap: 8px;
-}
-
-.observer-row {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 8px;
-	padding: 8px 10px;
-	border-radius: 10px;
-	background: rgba(255, 255, 255, 0.05);
+	place-items: center;
+	width: 34px;
+	height: 34px;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.07);
 	color: #eef7ff;
-	font-size: 0.86rem;
+	list-style: none;
+	cursor: pointer;
 }
 
-.role-inline-button {
-	flex: 0 0 auto;
-	padding: 5px 8px;
+.self-role-menu summary::-webkit-details-marker {
+	display: none;
+}
+
+.self-role-menu-popover {
+	position: absolute;
+	top: calc(100% + 8px);
+	right: 0;
+	z-index: 12;
+	display: grid;
+	gap: 4px;
+	min-width: 132px;
+	padding: 6px;
+	border-radius: 12px;
+	background: rgba(12, 16, 28, 0.98);
+	box-shadow:
+		0 12px 28px rgba(0, 0, 0, 0.32),
+		inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.self-role-menu-popover button {
+	padding: 8px 10px;
+	border-radius: 9px;
+	background: transparent;
+	color: #eef7ff;
+	font-size: 0.82rem;
+	text-align: left;
+}
+
+.self-role-menu-popover button:hover,
+.self-role-menu-popover button.active {
+	background: rgba(246, 178, 83, 0.18);
+	color: var(--accent-strong);
 }
 
 .status-pill {
@@ -920,6 +952,7 @@ input {
 }
 
 .meta-list > div {
+	position: relative;
 	padding: 14px 16px;
 	border-radius: 14px;
 	background: var(--panel-soft);
@@ -940,21 +973,16 @@ input {
 	overflow: hidden;
 }
 
-.completed-rounds-list {
-	display: grid;
-	gap: 10px;
-	margin-top: 10px;
-	max-height: 220px;
-	overflow: auto;
-	padding-right: 2px;
-}
-
 .completed-round-card {
 	display: grid;
 	gap: 10px;
 	padding: 12px;
 	border-radius: 14px;
 	background: var(--panel-soft);
+}
+
+.ticket-history-slide {
+	min-height: 112px;
 }
 
 .completed-round-title {
@@ -1002,7 +1030,16 @@ input {
 .table-zone {
 	min-height: 0;
 	display: grid;
-	grid-template-rows: minmax(0, 1fr);
+	place-items: center;
+	padding-bottom: 34px;
+}
+
+.table-stack {
+	position: relative;
+	width: 100%;
+	height: min(100%, 900px);
+	max-height: 100%;
+	transform: translateY(-18px);
 }
 
 .table-frame {
@@ -1010,6 +1047,60 @@ input {
 	min-height: 0;
 	height: 100%;
 	overflow: hidden;
+}
+
+.observer-bench {
+	position: absolute;
+	right: 8%;
+	bottom: -4%;
+	left: 8%;
+	z-index: 1;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	min-height: 78px;
+	padding: 10px;
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	border-radius: 18px;
+	background: rgba(8, 12, 22, 0.26);
+}
+
+.observer-bench-label {
+	position: absolute;
+	top: 50%;
+	left: 0;
+	padding: 0 6px;
+	color: var(--text-muted);
+	font-size: 0.68rem;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	transform: translate(calc(-50% - 2ch), -50%) rotate(-90deg);
+	transform-origin: center;
+}
+
+.host-board {
+	position: absolute;
+	top: 6%;
+	right: 5%;
+	z-index: 2;
+	display: grid;
+	place-items: center;
+	width: 148px;
+	min-height: 78px;
+	padding: 10px;
+	pointer-events: none;
+}
+
+.host-board-label {
+	position: absolute;
+	top: 0;
+	left: 14px;
+	padding: 0 6px;
+	color: var(--text-muted);
+	font-size: 0.68rem;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	transform: translateY(-50%);
 }
 
 .ellipse-table {
@@ -1102,7 +1193,8 @@ input {
 	--seat-scale: 1;
 	width: calc(108px * var(--seat-scale));
 	transform: translate(-50%, -50%);
-	padding: calc(9px * var(--seat-scale)) calc(10px * var(--seat-scale));
+	padding: calc(18px * var(--seat-scale)) calc(10px * var(--seat-scale))
+		calc(9px * var(--seat-scale));
 	border-radius: calc(12px * var(--seat-scale));
 	background: rgba(11, 14, 22, 0.9);
 	border: 1px solid rgba(255, 255, 255, 0.08);
@@ -1110,10 +1202,87 @@ input {
 	box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
 }
 
-.seat-role-button {
-	margin-top: calc(5px * var(--seat-scale));
-	padding: calc(4px * var(--seat-scale)) calc(7px * var(--seat-scale));
-	font-size: calc(0.62rem * var(--seat-scale));
+.observer-card {
+	position: relative;
+	width: 108px;
+	transform: none;
+	opacity: 0.9;
+}
+
+.host-card {
+	position: relative;
+	display: grid;
+	place-items: center;
+	width: 124px;
+	min-height: 56px;
+	padding: 14px 16px;
+	border-color: rgba(246, 178, 83, 0.48);
+	box-shadow:
+		0 14px 30px rgba(0, 0, 0, 0.28),
+		inset 0 0 0 1px rgba(246, 178, 83, 0.16);
+	transform: none;
+}
+
+.host-player-card {
+	border-color: rgba(246, 178, 83, 0.48);
+	box-shadow:
+		0 14px 30px rgba(0, 0, 0, 0.28),
+		inset 0 0 0 1px rgba(246, 178, 83, 0.16);
+}
+
+.seat-role-menu {
+	position: absolute;
+	top: calc(5px * var(--seat-scale));
+	right: calc(5px * var(--seat-scale));
+	z-index: 3;
+}
+
+.seat-role-menu summary {
+	display: grid;
+	place-items: center;
+	width: calc(24px * var(--seat-scale));
+	height: calc(18px * var(--seat-scale));
+	padding: 0;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.07);
+	color: #eef7ff;
+	font-size: calc(0.68rem * var(--seat-scale));
+	line-height: 1;
+	list-style: none;
+	cursor: pointer;
+}
+
+.seat-role-menu summary::-webkit-details-marker {
+	display: none;
+}
+
+.seat-role-menu-popover {
+	position: absolute;
+	top: calc(100% + 4px);
+	right: 0;
+	display: grid;
+	min-width: calc(104px * var(--seat-scale));
+	padding: 5px;
+	border-radius: 10px;
+	background: rgba(12, 16, 28, 0.98);
+	box-shadow:
+		0 10px 24px rgba(0, 0, 0, 0.32),
+		inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.seat-role-menu-popover button {
+	padding: calc(7px * var(--seat-scale)) calc(9px * var(--seat-scale));
+	border-radius: 8px;
+	background: transparent;
+	color: #eef7ff;
+	font-size: calc(0.72rem * var(--seat-scale));
+	text-align: left;
+	white-space: nowrap;
+}
+
+.seat-role-menu-popover button:hover {
+	background: rgba(246, 178, 83, 0.18);
+	color: var(--accent-strong);
 }
 
 .seat-card.self {

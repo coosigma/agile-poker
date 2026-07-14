@@ -47,6 +47,7 @@ export function RoomScreen({
 		'reset' | 'reveal' | 'done' | null
 	>(null);
 	const [now, setNow] = useState(() => Date.now());
+	const [ticketHistoryIndex, setTicketHistoryIndex] = useState(0);
 
 	// Seats are distributed by pixel arc length, which needs the table frame's
 	// aspect ratio (width / height). Measure it and keep it current on resize.
@@ -78,11 +79,19 @@ export function RoomScreen({
 		null;
 	const isHost = Boolean(self?.isHost);
 	const participants = state?.participants ?? [];
+	const hostParticipant =
+		participants.find((participant) => participant.isHost) ?? null;
 	const playerParticipants = participants.filter(
 		(participant) => participant.role === 'player',
 	);
 	const observerParticipants = participants.filter(
 		(participant) => participant.role === 'observer',
+	);
+	const seatedParticipants = playerParticipants.filter(
+		(participant) => !participant.isHost,
+	);
+	const visibleObserverParticipants = observerParticipants.filter(
+		(participant) => !participant.isHost,
 	);
 	const completedRounds = state?.completedRounds ?? [];
 	const connectedCount = playerParticipants.filter(
@@ -203,8 +212,16 @@ export function RoomScreen({
 		setPendingControl(null);
 	};
 
-	const seatLayouts = layoutSeats(playerParticipants.length, frameAspect);
-	const seats = playerParticipants.map((participant, index) => ({
+	const hostIsPlayer = hostParticipant?.role === 'player';
+	const tableSeatLayouts = layoutSeats(
+		seatedParticipants.length + (hostIsPlayer ? 1 : 0),
+		frameAspect,
+	);
+	const hostSeat = hostIsPlayer ? tableSeatLayouts[0] : null;
+	const seatLayouts = hostIsPlayer
+		? tableSeatLayouts.slice(1)
+		: tableSeatLayouts;
+	const seats = seatedParticipants.map((participant, index) => ({
 		participant,
 		...seatLayouts[index],
 	}));
@@ -217,6 +234,96 @@ export function RoomScreen({
 				: null;
 	const isPlayer = self?.role === 'player';
 	const canSubmitVote = isPlayer && state?.votingState === 'voting';
+	const ticketHistory = [...completedRounds].reverse();
+	const currentHistory = ticketHistory[ticketHistoryIndex] ?? null;
+	const ticketHistoryActions = (
+		<div className="ticket-history-actions">
+			<button
+				className="ticket-history-button"
+				type="button"
+				aria-label={copy.previousTicket}
+				disabled={ticketHistoryIndex <= 0}
+				onClick={() => setTicketHistoryIndex((index) => Math.max(0, index - 1))}
+			>
+				‹
+			</button>
+			<button
+				className="ticket-history-button"
+				type="button"
+				aria-label={copy.nextTicket}
+				disabled={ticketHistoryIndex >= ticketHistory.length - 1}
+				onClick={() =>
+					setTicketHistoryIndex((index) =>
+						Math.min(Math.max(0, ticketHistory.length - 1), index + 1),
+					)
+				}
+			>
+				›
+			</button>
+		</div>
+	);
+
+	useEffect(() => {
+		if (ticketHistoryIndex >= ticketHistory.length) {
+			setTicketHistoryIndex(Math.max(0, ticketHistory.length - 1));
+		}
+	}, [ticketHistory.length, ticketHistoryIndex]);
+
+	const ticketHistorySlides = (showTitle: boolean) => (
+		<div className="ticket-history">
+			{showTitle ? (
+				<div className="ticket-history-header">
+					<strong>{copy.completedTickets}</strong>
+				</div>
+			) : null}
+			{currentHistory ? (
+				<article className="completed-round-card ticket-history-slide">
+					<div className="completed-round-title">
+						<strong>{currentHistory.ticketTitle}</strong>
+						<span>
+							{currentHistory.votes.length} {copy.statVotes}
+						</span>
+					</div>
+					<div className="completed-votes">
+						{currentHistory.votes.map((completedVote) => (
+							<span
+								className="completed-vote-pill"
+								key={`${currentHistory.ticketTitle}-${completedVote.participantId}`}
+							>
+								{completedVote.participantName}:{' '}
+								{voteLabel(completedVote.vote, language)}
+							</span>
+						))}
+					</div>
+				</article>
+			) : (
+				<p className="empty-panel-copy">{copy.noCompletedTickets}</p>
+			)}
+		</div>
+	);
+	const roleMenu = (
+		participantId: string,
+		role: 'player' | 'observer',
+		label: string,
+	) => (
+		<details className="seat-role-menu">
+			<summary aria-label={copy.roleLabel}>...</summary>
+			<div className="seat-role-menu-popover">
+				<button
+					type="button"
+					onClick={() =>
+						sendMessage({
+							type: 'set_role',
+							participantId,
+							role,
+						})
+					}
+				>
+					{label}
+				</button>
+			</div>
+		</details>
+	);
 
 	return (
 		<div className="app-shell room-shell">
@@ -293,60 +400,37 @@ export function RoomScreen({
 										.filter(Boolean)
 										.join(' · ')}
 								</strong>
+								{self ? (
+									<details className="self-role-menu">
+										<summary aria-label={copy.roleLabel}>✎</summary>
+										<div className="self-role-menu-popover">
+											<button
+												type="button"
+												className={self.role === 'player' ? 'active' : ''}
+												onClick={() =>
+													sendMessage({ type: 'set_role', role: 'player' })
+												}
+											>
+												{copy.playerRole}
+											</button>
+											<button
+												type="button"
+												className={self.role === 'observer' ? 'active' : ''}
+												onClick={() =>
+													sendMessage({ type: 'set_role', role: 'observer' })
+												}
+											>
+												{copy.observerRole}
+											</button>
+										</div>
+									</details>
+								) : null}
 							</div>
 						</div>
-						{self ? (
-							<div
-								className="role-toggle"
-								role="group"
-								aria-label={copy.roleLabel}
-							>
-								<button
-									type="button"
-									className={`role-toggle-button ${self.role === 'player' ? 'active' : ''}`}
-									onClick={() =>
-										sendMessage({ type: 'set_role', role: 'player' })
-									}
-								>
-									{copy.playerRole}
-								</button>
-								<button
-									type="button"
-									className={`role-toggle-button ${self.role === 'observer' ? 'active' : ''}`}
-									onClick={() =>
-										sendMessage({ type: 'set_role', role: 'observer' })
-									}
-								>
-									{copy.observerRole}
-								</button>
-							</div>
-						) : null}
 					</RoomPanel>
 
 					{isHost ? (
-						<RoomPanel
-							title={copy.hostControls}
-							actions={
-								<div className="ticket-history-actions">
-									<button
-										className="ticket-history-button"
-										type="button"
-										aria-label={copy.previousTicket}
-										disabled
-									>
-										‹
-									</button>
-									<button
-										className="ticket-history-button"
-										type="button"
-										aria-label={copy.nextTicket}
-										disabled
-									>
-										›
-									</button>
-								</div>
-							}
-						>
+						<RoomPanel title={copy.hostControls} actions={ticketHistoryActions}>
 							<form
 								className="stack host-ticket-form"
 								onSubmit={handleTicketSubmit}
@@ -415,180 +499,158 @@ export function RoomScreen({
 									<span className="control-pad-label">{copy.doneTicket}</span>
 								</button>
 							</div>
+							{ticketHistorySlides(true)}
 						</RoomPanel>
 					) : null}
 
-					<RoomPanel
-						title={copy.completedTickets}
-						className="completed-rounds-panel"
-						badge={
-							<span className="badge muted-badge">
-								{completedRounds.length}
-							</span>
-						}
-					>
-						{completedRounds.length > 0 ? (
-							<div className="completed-rounds-list">
-								{[...completedRounds].reverse().map((round, index) => (
-									<article
-										className="completed-round-card"
-										key={`${round.ticketTitle}-${completedRounds.length - index}`}
-									>
-										<div className="completed-round-title">
-											<strong>{round.ticketTitle}</strong>
-											<span>
-												{round.votes.length} {copy.statVotes}
-											</span>
-										</div>
-										<div className="completed-votes">
-											{round.votes.map((completedVote) => (
-												<span
-													className="completed-vote-pill"
-													key={`${round.ticketTitle}-${completedVote.participantId}`}
-												>
-													{completedVote.participantName}:{' '}
-													{voteLabel(completedVote.vote, language)}
-												</span>
-											))}
-										</div>
-									</article>
-								))}
-							</div>
-						) : (
-							<p className="empty-panel-copy">{copy.noCompletedTickets}</p>
-						)}
-					</RoomPanel>
-					<RoomPanel
-						title={copy.observers}
-						className="observer-panel"
-						badge={
-							<span className="badge muted-badge">
-								{observerParticipants.length}
-							</span>
-						}
-					>
-						{observerParticipants.length > 0 ? (
-							<div className="observer-list">
-								{observerParticipants.map((participant) => (
-									<div className="observer-row" key={participant.id}>
-										<span>
-											{participant.name}
-											{participant.isHost ? ` · ${copy.participantHost}` : ''}
-										</span>
-										{isHost && participant.id !== selfId ? (
-											<button
-												type="button"
-												className="role-inline-button"
-												onClick={() =>
-													sendMessage({
-														type: 'set_role',
-														participantId: participant.id,
-														role: 'player',
-													})
-												}
-											>
-												{copy.makePlayer}
-											</button>
-										) : null}
-									</div>
-								))}
-							</div>
-						) : (
-							<p className="empty-panel-copy">{copy.noObservers}</p>
-						)}
-					</RoomPanel>
+					{isHost ? null : (
+						<RoomPanel
+							title={copy.completedTickets}
+							actions={ticketHistoryActions}
+							className="completed-rounds-panel"
+						>
+							{ticketHistorySlides(false)}
+						</RoomPanel>
+					)}
 				</aside>
 
 				<main className="table-zone">
-					<div className="table-frame" ref={tableFrameRef}>
-						<div className="ellipse-table">
-							<div className="table-center">
-								<p>{copy.revealTable}</p>
-								<strong
-									style={{
-										fontSize: `clamp(1rem, ${Math.min(2.2, 40 / Math.max((state?.ticketTitle || copy.waitingTopic).length, 1))}rem, 2.2rem)`,
-									}}
+					<div className="table-stack">
+						{hostParticipant && !hostIsPlayer ? (
+							<div className="host-board" aria-label={copy.participantHost}>
+								<span className="host-board-label">{copy.participantHost}</span>
+								<article
+									className={`seat-card host-card ${hostParticipant.id === selfId ? 'self' : ''}`}
 								>
-									{state?.ticketTitle || copy.waitingTopic}
-								</strong>
-								<div
-									className={`scoreboard ${stats.revealed ? 'revealed' : 'pending'}`}
-								>
-									<div className="scoreboard-cell">
-										<span className="scoreboard-value">{stats.totalVotes}</span>
-										<span className="scoreboard-label">{copy.statVotes}</span>
-									</div>
-									<div className="scoreboard-cell">
-										<span className="scoreboard-value">{stats.mean}</span>
-										<span className="scoreboard-label">{copy.statMean}</span>
-									</div>
-									<div className="scoreboard-cell">
-										<span className="scoreboard-value">{stats.stdDev}</span>
-										<span className="scoreboard-label">{copy.statStdDev}</span>
-									</div>
-								</div>
-							</div>
-						</div>
-						{seats.map(({ participant, left, top, scale }) => (
-							<article
-								key={participant.id}
-								className={`seat-card ${participant.id === selfId ? 'self' : ''} ${scale < 0.7 ? 'compact' : ''}`}
-								style={
-									{
-										left: `${left}%`,
-										top: `${top}%`,
-										'--seat-scale': scale,
-									} as CSSProperties
-								}
-							>
-								<span className="seat-name">
-									{participant.name}
-									{participant.isHost ? ` · ${copy.participantHost}` : ''}
-								</span>
-								{isHost && participant.id !== selfId ? (
-									<button
-										type="button"
-										className="seat-role-button"
-										onClick={() =>
-											sendMessage({
-												type: 'set_role',
-												participantId: participant.id,
-												role: 'observer',
-											})
-										}
-									>
-										{copy.makeObserver}
-									</button>
-								) : null}
-								<strong>
-									{state?.votingState === 'revealed'
-										? voteLabel(participant.vote, language)
-										: participant.hasVoted
-											? copy.votedYes
-											: copy.voteNotCast}
-								</strong>
-								<small>
-									{participant.connected ? copy.online : copy.offline}
-								</small>
-							</article>
-						))}
-						{revealCountdownSeconds !== null ? (
-							<div
-								className="countdown-overlay"
-								role="status"
-								aria-live="polite"
-								data-testid="reveal-countdown"
-							>
-								<div>
-									<span>{revealCountdownSeconds}</span>
-									<small>
-										{formatText(copy.revealCountdown, {
-											seconds: revealCountdownSeconds,
-										})}
-									</small>
-								</div>
+									<span className="seat-name">{hostParticipant.name}</span>
+								</article>
 							</div>
 						) : null}
+						<div className="table-frame" ref={tableFrameRef}>
+							<div className="ellipse-table">
+								<div className="table-center">
+									<p>{copy.revealTable}</p>
+									<strong
+										style={{
+											fontSize: `clamp(1rem, ${Math.min(2.2, 40 / Math.max((state?.ticketTitle || copy.waitingTopic).length, 1))}rem, 2.2rem)`,
+										}}
+									>
+										{state?.ticketTitle || copy.waitingTopic}
+									</strong>
+									<div
+										className={`scoreboard ${stats.revealed ? 'revealed' : 'pending'}`}
+									>
+										<div className="scoreboard-cell">
+											<span className="scoreboard-value">
+												{stats.totalVotes}
+											</span>
+											<span className="scoreboard-label">{copy.statVotes}</span>
+										</div>
+										<div className="scoreboard-cell">
+											<span className="scoreboard-value">{stats.mean}</span>
+											<span className="scoreboard-label">{copy.statMean}</span>
+										</div>
+										<div className="scoreboard-cell">
+											<span className="scoreboard-value">{stats.stdDev}</span>
+											<span className="scoreboard-label">
+												{copy.statStdDev}
+											</span>
+										</div>
+									</div>
+								</div>
+							</div>
+							{hostParticipant && hostSeat ? (
+								<article
+									className={`seat-card host-player-card ${hostParticipant.id === selfId ? 'self' : ''}`}
+									style={
+										{
+											left: `${hostSeat.left}%`,
+											top: `${hostSeat.top}%`,
+											'--seat-scale': hostSeat.scale,
+										} as CSSProperties
+									}
+								>
+									<span className="seat-name">
+										{hostParticipant.name} · {copy.participantHost}
+									</span>
+									<strong>
+										{state?.votingState === 'revealed'
+											? voteLabel(hostParticipant.vote, language)
+											: hostParticipant.hasVoted
+												? copy.votedYes
+												: copy.voteNotCast}
+									</strong>
+									<small>
+										{hostParticipant.connected ? copy.online : copy.offline}
+									</small>
+								</article>
+							) : null}
+							{seats.map(({ participant, left, top, scale }) => (
+								<article
+									key={participant.id}
+									className={`seat-card ${participant.id === selfId ? 'self' : ''} ${scale < 0.7 ? 'compact' : ''}`}
+									style={
+										{
+											left: `${left}%`,
+											top: `${top}%`,
+											'--seat-scale': scale,
+										} as CSSProperties
+									}
+								>
+									<span className="seat-name">
+										{participant.name}
+										{participant.isHost ? ` · ${copy.participantHost}` : ''}
+									</span>
+									{isHost && participant.id !== selfId
+										? roleMenu(participant.id, 'observer', copy.makeObserver)
+										: null}
+									<strong>
+										{state?.votingState === 'revealed'
+											? voteLabel(participant.vote, language)
+											: participant.hasVoted
+												? copy.votedYes
+												: copy.voteNotCast}
+									</strong>
+									<small>
+										{participant.connected ? copy.online : copy.offline}
+									</small>
+								</article>
+							))}
+							{revealCountdownSeconds !== null ? (
+								<div
+									className="countdown-overlay"
+									role="status"
+									aria-live="polite"
+									data-testid="reveal-countdown"
+								>
+									<div>
+										<span>{revealCountdownSeconds}</span>
+										<small>
+											{formatText(copy.revealCountdown, {
+												seconds: revealCountdownSeconds,
+											})}
+										</small>
+									</div>
+								</div>
+							) : null}
+						</div>
+						<div className="observer-bench" aria-label={copy.observers}>
+							<span className="observer-bench-label">{copy.observers}</span>
+							{visibleObserverParticipants.map((participant) => (
+								<article
+									key={participant.id}
+									className={`seat-card observer-card ${participant.id === selfId ? 'self' : ''}`}
+								>
+									<span className="seat-name">
+										{participant.name}
+										{participant.isHost ? ` · ${copy.participantHost}` : ''}
+									</span>
+									{isHost && participant.id !== selfId
+										? roleMenu(participant.id, 'player', copy.makePlayer)
+										: null}
+								</article>
+							))}
+						</div>
 					</div>
 				</main>
 
