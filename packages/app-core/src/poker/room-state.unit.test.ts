@@ -18,6 +18,7 @@ import {
 	setTicket,
 	startRound,
 	toRoomStateView,
+	transferHost,
 } from './room-state.js';
 import type { RoomState, VoteChoice } from './types.js';
 
@@ -327,6 +328,25 @@ describe('voting transitions', () => {
 			'player',
 		);
 	});
+
+	test('host can transfer host status to another participant', () => {
+		let state = joinRoom(room(), { id: 'host', name: 'Host' });
+		state = joinRoom(state, { id: 'guest', name: 'Guest' });
+
+		state = transferHost(state, 'host', 'guest');
+
+		expect(state.hostId).toBe('guest');
+	});
+
+	test('non-hosts cannot transfer host status', () => {
+		let state = joinRoom(room(), { id: 'host', name: 'Host' });
+		state = joinRoom(state, { id: 'guest', name: 'Guest' });
+
+		const after = transferHost(state, 'guest', 'guest');
+
+		expect(after).toBe(state);
+		expect(after.hostId).toBe('host');
+	});
 });
 
 describe('setName', () => {
@@ -345,6 +365,20 @@ describe('leaveRoom', () => {
 		state = leaveRoom(state, 'host');
 		expect(state.hostId).toBe('guest');
 		expect(state.participants).toHaveLength(1);
+	});
+
+	test('reassigns the host to the second entrant when the host leaves a larger room', () => {
+		let state = joinRoom(room(), { id: 'host', name: 'Host' });
+		state = joinRoom(state, { id: 'second', name: 'Second' });
+		state = joinRoom(state, { id: 'third', name: 'Third' });
+
+		state = leaveRoom(state, 'host');
+
+		expect(state.hostId).toBe('second');
+		expect(state.participants.map((participant) => participant.id)).toEqual([
+			'second',
+			'third',
+		]);
 	});
 });
 

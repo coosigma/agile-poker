@@ -418,13 +418,23 @@ export function RoomScreen({
 	const closeRoleMenu = (event: MouseEvent<HTMLButtonElement>) => {
 		event.currentTarget.closest('details')?.removeAttribute('open');
 	};
+	const closeOtherSeatRoleMenus = (event: MouseEvent<HTMLElement>) => {
+		const currentMenu = event.currentTarget.closest('details');
+		document
+			.querySelectorAll<HTMLDetailsElement>('.seat-role-menu[open]')
+			.forEach((menu) => {
+				if (menu !== currentMenu) {
+					menu.removeAttribute('open');
+				}
+			});
+	};
 	const roleMenu = (
 		participantId: string,
 		role: 'player' | 'observer',
 		label: string,
 	) => (
 		<details className="seat-role-menu">
-			<summary aria-label={copy.roleLabel}>
+			<summary aria-label={copy.roleLabel} onClick={closeOtherSeatRoleMenus}>
 				<svg
 					className="seat-role-menu-icon"
 					viewBox="0 0 16 16"
@@ -437,6 +447,18 @@ export function RoomScreen({
 				</svg>
 			</summary>
 			<div className="seat-role-menu-popover">
+				<button
+					type="button"
+					onClick={(event) => {
+						closeRoleMenu(event);
+						sendMessage({
+							type: 'transfer_host',
+							participantId,
+						});
+					}}
+				>
+					{copy.makeHost}
+				</button>
 				<button
 					type="button"
 					onClick={(event) => {

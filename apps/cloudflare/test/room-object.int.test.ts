@@ -102,6 +102,7 @@ describe('RoomDO boundary paths', () => {
 		const room = newRoom('room-leave');
 		const host = await connect(room);
 		const guest = await connect(room);
+		const third = await connect(room);
 
 		await host.message(
 			JSON.stringify({
@@ -114,15 +115,23 @@ describe('RoomDO boundary paths', () => {
 		await guest.message(
 			JSON.stringify({ type: 'join_room', roomId: 'room-leave', name: 'Bob' }),
 		);
-		expect(roster(guest)).toHaveLength(2);
+		await third.message(
+			JSON.stringify({
+				type: 'join_room',
+				roomId: 'room-leave',
+				name: 'Cara',
+			}),
+		);
+		expect(roster(guest)).toHaveLength(3);
 
-		// Host drops: the DO's close handler runs `leave` and broadcasts to the
-		// survivor, who is promoted to host.
+		// Host drops: the DO's close handler runs `leave` and promotes the
+		// earliest remaining participant.
 		await host.close();
 
 		const survivors = roster(guest);
-		expect(survivors.map((p) => p.name)).toEqual(['Bob']);
+		expect(survivors.map((p) => p.name)).toEqual(['Bob', 'Cara']);
 		expect(survivors[0]?.isHost).toBe(true);
+		expect(survivors[1]?.isHost).toBe(false);
 	});
 
 	it('broadcasts to every connected socket', async () => {

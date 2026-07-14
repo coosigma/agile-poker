@@ -52,6 +52,10 @@ export const ClientMessageSchema = Schema.Union(
 		role: ParticipantRole,
 	}),
 	Schema.Struct({
+		type: Schema.Literal('transfer_host'),
+		participantId: Schema.String,
+	}),
+	Schema.Struct({
 		type: Schema.Literal('set_ticket'),
 		ticketTitle: Schema.optional(Schema.String),
 	}),

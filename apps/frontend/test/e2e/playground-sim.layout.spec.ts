@@ -158,12 +158,23 @@ test('host changes participant role through card menu', async ({ page }) => {
 	await page.goto('/playground.html');
 
 	await page.getByRole('button', { name: 'Add player' }).click();
+	await page.getByRole('button', { name: 'Add player' }).click();
 	const playerCard = page.locator('.table-frame > .seat-card').filter({
 		hasText: 'Sim 1',
 	});
+	const secondPlayerCard = page.locator('.table-frame > .seat-card').filter({
+		hasText: 'Sim 2',
+	});
 	await expect(playerCard).toBeVisible();
+	await expect(secondPlayerCard).toBeVisible();
 	await playerCard.locator('.seat-role-menu summary').click();
 	await expect(page.locator('.seat-role-menu[open]')).toHaveCount(1);
+	await secondPlayerCard.locator('.seat-role-menu summary').click();
+	await expect(page.locator('.seat-role-menu[open]')).toHaveCount(1);
+	await expect(secondPlayerCard.locator('.seat-role-menu')).toHaveAttribute(
+		'open',
+		'',
+	);
 	await page.locator('.table-center').click();
 	await expect(page.locator('.seat-role-menu[open]')).toHaveCount(0);
 
@@ -182,6 +193,31 @@ test('host changes participant role through card menu', async ({ page }) => {
 	await expect(
 		page.locator('.table-frame > .seat-card').filter({ hasText: 'Sim 1' }),
 	).toBeVisible();
+});
+
+test('host transfers host status through card menu', async ({ page }) => {
+	await page.addInitScript(() => {
+		window.localStorage.setItem('agile-poker:language', 'en');
+	});
+	await page.goto('/playground.html');
+
+	await page.getByRole('button', { name: 'Add player' }).click();
+	const playerCard = page.locator('.table-frame > .seat-card').filter({
+		hasText: 'Sim 1',
+	});
+	await expect(playerCard).toBeVisible();
+
+	await playerCard.locator('.seat-role-menu summary').click();
+	await playerCard.getByRole('button', { name: 'Make host' }).click();
+
+	await expect(page.locator('.host-player-card')).toContainText('Sim 1 · Host');
+	await expect(
+		page.locator('.meta-list > div').filter({ hasText: 'Role' }),
+	).toContainText('Observer');
+	await expect(
+		page.locator('.meta-list > div').filter({ hasText: 'Role' }),
+	).not.toContainText('Host');
+	await expect(page.locator('.seat-role-menu')).toHaveCount(0);
 });
 
 test('playground simulated player votes stay in sync after host reset', async ({

@@ -113,6 +113,10 @@ export type ClientMessage =
 			readonly participantId?: string;
 			readonly role: ParticipantRole;
 	  }
+	| {
+			readonly type: 'transfer_host';
+			readonly participantId: string;
+	  }
 	| { readonly type: 'set_ticket'; readonly ticketTitle?: string }
 	| { readonly type: 'vote'; readonly vote?: VoteChoice }
 	| { readonly type: 'clear_vote' }

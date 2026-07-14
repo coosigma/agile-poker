@@ -133,6 +133,23 @@ export function setRole(
 	}));
 }
 
+export function transferHost(
+	state: RoomState,
+	id: string,
+	participantId: string,
+): RoomState {
+	if (id !== state.hostId) {
+		return state;
+	}
+	if (
+		participantId === state.hostId ||
+		!state.participants.some((participant) => participant.id === participantId)
+	) {
+		return state;
+	}
+	return { ...state, hostId: participantId };
+}
+
 export function setName(
 	state: RoomState,
 	id: string,
@@ -348,6 +365,8 @@ export function applyClientMessage(
 			return setName(state, participantId, message.name);
 		case 'set_role':
 			return setRole(state, participantId, message.role, message.participantId);
+		case 'transfer_host':
+			return transferHost(state, participantId, message.participantId);
 		case 'set_ticket':
 			return setTicket(state, participantId, message.ticketTitle);
 		case 'vote':
