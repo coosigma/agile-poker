@@ -195,6 +195,32 @@ h2 {
 	gap: 12px;
 }
 
+.role-choice-group {
+	display: grid;
+	gap: 10px;
+}
+
+.role-choice {
+	display: grid;
+	gap: 4px;
+	padding: 14px;
+	border-radius: 14px;
+	background: rgba(255, 255, 255, 0.05);
+	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+	color: #eef7ff;
+	text-align: left;
+}
+
+.role-choice span {
+	color: var(--text-muted);
+	font-size: 0.86rem;
+}
+
+.role-choice.active {
+	background: rgba(246, 178, 83, 0.16);
+	box-shadow: inset 0 0 0 1px rgba(246, 178, 83, 0.4);
+}
+
 .panel .stack + .stack {
 	margin-top: 12px;
 }
@@ -788,6 +814,54 @@ input {
 	color: #fff;
 }
 
+.role-toggle {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 8px;
+	margin-top: 14px;
+}
+
+.role-toggle-button,
+.role-inline-button,
+.seat-role-button {
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.07);
+	color: #eef7ff;
+	font-size: 0.76rem;
+}
+
+.role-toggle-button {
+	padding: 8px 10px;
+}
+
+.role-toggle-button.active {
+	background: rgba(246, 178, 83, 0.2);
+	box-shadow: inset 0 0 0 1px rgba(246, 178, 83, 0.38);
+	color: var(--accent-strong);
+}
+
+.observer-list {
+	display: grid;
+	gap: 8px;
+}
+
+.observer-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	padding: 8px 10px;
+	border-radius: 10px;
+	background: rgba(255, 255, 255, 0.05);
+	color: #eef7ff;
+	font-size: 0.86rem;
+}
+
+.role-inline-button {
+	flex: 0 0 auto;
+	padding: 5px 8px;
+}
+
 .status-pill {
 	background: rgba(255, 255, 255, 0.06);
 }
@@ -820,11 +894,18 @@ input {
 }
 
 .side-panel {
-	display: grid;
+	display: flex;
+	flex-direction: column;
 	gap: 12px;
 	min-height: 0;
-	grid-auto-rows: minmax(0, auto);
-	align-content: start;
+	align-items: stretch;
+	justify-content: flex-start;
+	overflow-y: auto;
+	padding-right: 2px;
+}
+
+.side-panel > .panel {
+	flex: 0 0 auto;
 }
 
 .panel {
@@ -1027,6 +1108,12 @@ input {
 	border: 1px solid rgba(255, 255, 255, 0.08);
 	text-align: center;
 	box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+}
+
+.seat-role-button {
+	margin-top: calc(5px * var(--seat-scale));
+	padding: calc(4px * var(--seat-scale)) calc(7px * var(--seat-scale));
+	font-size: calc(0.62rem * var(--seat-scale));
 }
 
 .seat-card.self {

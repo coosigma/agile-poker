@@ -21,6 +21,7 @@ import { HomeScreen } from './screens/HomeScreen';
 import { JoinRoomScreen } from './screens/JoinRoomScreen';
 import { NameEntryScreen } from './screens/NameEntryScreen';
 import { RoomScreen } from './screens/RoomScreen';
+import type { ParticipantRole } from './types';
 
 type Screen = 'home' | 'join-room' | 'name-entry' | 'room';
 
@@ -36,6 +37,7 @@ export function App() {
 	const [roomId, setRoomId] = useState(initialRoomId);
 	const [name, setName] = useState(getInitialName);
 	const [nameDraft, setNameDraft] = useState(getInitialName);
+	const [roleDraft, setRoleDraft] = useState<ParticipantRole>('player');
 	const [joinRoomDraft, setJoinRoomDraft] = useState('');
 	const [language, setLanguage] = useState<Language>(getInitialLanguage);
 	const [error, setError] = useState('');
@@ -60,8 +62,9 @@ export function App() {
 			return;
 		}
 		updateRoomInUrl(nextRoomId);
-		setRoomIntent(nextRoomId, 'create');
+		setRoomIntent(nextRoomId, 'create', 'observer');
 		setRoomId(nextRoomId);
+		setRoleDraft('observer');
 		setError('');
 		setScreen('name-entry');
 	};
@@ -86,7 +89,7 @@ export function App() {
 		}
 
 		updateRoomInUrl(normalizedRoomId);
-		setRoomIntent(normalizedRoomId, 'join');
+		setRoomIntent(normalizedRoomId, 'join', roleDraft);
 		setRoomId(normalizedRoomId);
 		setError('');
 		setScreen('name-entry');
@@ -98,6 +101,8 @@ export function App() {
 		setName(nextName);
 		setError('');
 		if (roomId) {
+			const intent = getRoomIntent(roomId);
+			setRoomIntent(roomId, intent?.type ?? 'join', roleDraft);
 			updateRoomInUrl(roomId);
 			window.location.replace(roomShareUrl(roomId));
 			return;
@@ -147,6 +152,8 @@ export function App() {
 				roomId={roomId}
 				nameDraft={nameDraft}
 				setNameDraft={setNameDraft}
+				roleDraft={roleDraft}
+				setRoleDraft={setRoleDraft}
 				intentType={getRoomIntent(roomId)?.type}
 				onSubmit={handleNameEntry}
 				onBack={handleBackHome}

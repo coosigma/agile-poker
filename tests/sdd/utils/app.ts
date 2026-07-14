@@ -38,12 +38,22 @@ export async function forceEnglish(context: BrowserContext): Promise<void> {
 
 // --- room-screen locators ------------------------------------------------
 
-/** The `My role` badge on the room screen (`Host` / `Member`). */
+/** The `My role` badge on the room screen (`Host · Observer` / `Player`). */
 export function roleBadge(page: Page): Locator {
 	return page
 		.locator('.meta-list > div')
 		.filter({ hasText: 'My role' })
 		.locator('strong');
+}
+
+export async function switchSelfRole(
+	page: Page,
+	role: 'Player' | 'Observer',
+): Promise<void> {
+	await page
+		.locator('.role-toggle')
+		.getByRole('button', { name: role, exact: true })
+		.evaluate((button: HTMLButtonElement) => button.click());
 }
 
 /** The `Voted` counter on the room screen, e.g. `1/2`. */

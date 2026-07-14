@@ -2,6 +2,7 @@ import type { FormEvent } from 'react';
 import { LanguageSelector } from '../components/LanguageSelector';
 import { STRINGS, type Language } from '../lib/i18n';
 import type { RoomIntentType } from '../lib/poker';
+import type { ParticipantRole } from '../types';
 
 interface NameEntryScreenProps {
 	readonly language: Language;
@@ -9,6 +10,8 @@ interface NameEntryScreenProps {
 	readonly roomId: string;
 	readonly nameDraft: string;
 	readonly setNameDraft: (value: string) => void;
+	readonly roleDraft: ParticipantRole;
+	readonly setRoleDraft: (value: ParticipantRole) => void;
 	readonly intentType: RoomIntentType | undefined;
 	readonly onSubmit: (event: FormEvent) => void;
 	readonly onBack: () => void;
@@ -21,6 +24,8 @@ export function NameEntryScreen({
 	roomId,
 	nameDraft,
 	setNameDraft,
+	roleDraft,
+	setRoleDraft,
 	intentType,
 	onSubmit,
 	onBack,
@@ -51,6 +56,32 @@ export function NameEntryScreen({
 							placeholder="Alice"
 						/>
 					</label>
+					<div
+						className="role-choice-group"
+						role="radiogroup"
+						aria-label={copy.roleLabel}
+					>
+						<button
+							type="button"
+							className={`role-choice ${roleDraft === 'player' ? 'active' : ''}`}
+							role="radio"
+							aria-checked={roleDraft === 'player'}
+							onClick={() => setRoleDraft('player')}
+						>
+							<strong>{copy.playerRole}</strong>
+							<span>{copy.playerRoleDesc}</span>
+						</button>
+						<button
+							type="button"
+							className={`role-choice ${roleDraft === 'observer' ? 'active' : ''}`}
+							role="radio"
+							aria-checked={roleDraft === 'observer'}
+							onClick={() => setRoleDraft('observer')}
+						>
+							<strong>{copy.observerRole}</strong>
+							<span>{copy.observerRoleDesc}</span>
+						</button>
+					</div>
 					<button className="primary-button" type="submit">
 						{copy.enterRoom}
 					</button>

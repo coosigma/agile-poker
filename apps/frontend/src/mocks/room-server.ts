@@ -19,6 +19,7 @@ import {
 	redactRoomStateViewForParticipant,
 	toRoomStateView,
 	type ClientMessage,
+	type ParticipantRole,
 	type RoomState,
 	type ServerMessage,
 	type VoteChoice,
@@ -35,7 +36,13 @@ export interface MockServerConnection {
 export interface SimulatedPlayer {
 	readonly id: string;
 	readonly name: string;
+	readonly role: ParticipantRole;
 	readonly vote: VoteChoice | null;
+}
+
+interface SimulatedParticipant {
+	readonly name: string;
+	readonly role: ParticipantRole;
 }
 
 /** Estimates a simulated player casts when it joins an active voting round. */
@@ -46,7 +53,7 @@ export class MockRoomServer {
 	private readonly live = new Map<string, Emit>();
 	private readonly listeners = new Set<StateListener>();
 	private counter = 0;
-	private readonly sims = new Map<string, string>();
+	private readonly sims = new Map<string, SimulatedParticipant>();
 	private simCounter = 0;
 	private revealCountdownTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -61,16 +68,32 @@ export class MockRoomServer {
 	 * card renders filled content.
 	 */
 	addSimulatedPlayer(name?: string): SimulatedPlayer {
+		return this.addSimulatedParticipant('player', name);
+	}
+
+	addSimulatedObserver(name?: string): SimulatedPlayer {
+		return this.addSimulatedParticipant('observer', name);
+	}
+
+	private addSimulatedParticipant(
+		role: ParticipantRole,
+		name?: string,
+	): SimulatedPlayer {
 		this.simCounter += 1;
 		const id = `sim-${this.simCounter}`;
-		const displayName = name?.trim() || `Sim ${this.simCounter}`;
+		const displayName =
+			name?.trim() ||
+			(role === 'observer'
+				? `Observer ${this.simCounter}`
+				: `Sim ${this.simCounter}`);
 		this.applyMessage(id, {
 			type: 'join_room',
 			roomId: this.state.roomId,
 			name: displayName,
 			claimHost: false,
+			role,
 		});
-		if (this.state.votingState === 'voting') {
+		if (role === 'player' && this.state.votingState === 'voting') {
 			const base =
 				SIM_VOTE_BASES[(this.simCounter - 1) % SIM_VOTE_BASES.length];
 			this.applyMessage(id, {
@@ -78,13 +101,20 @@ export class MockRoomServer {
 				vote: { kind: 'estimate', base, modifier: 'flat' },
 			});
 		}
-		this.sims.set(id, displayName);
+		this.sims.set(id, { name: displayName, role });
 		this.broadcast();
-		return this.simulatedPlayer(id, displayName, this.voteByParticipantId());
+		return this.simulatedPlayer(
+			id,
+			{ name: displayName, role },
+			this.voteByParticipantId(),
+		);
 	}
 
 	voteAsSimulatedPlayer(id: string, vote: VoteChoice): void {
 		if (!this.sims.has(id)) {
+			return;
+		}
+		if (this.sims.get(id)?.role !== 'player') {
 			return;
 		}
 		this.applyMessage(id, { type: 'vote', vote });
@@ -93,6 +123,9 @@ export class MockRoomServer {
 
 	clearSimulatedPlayerVote(id: string): void {
 		if (!this.sims.has(id)) {
+			return;
+		}
+		if (this.sims.get(id)?.role !== 'player') {
 			return;
 		}
 		this.applyMessage(id, { type: 'clear_vote' });
@@ -123,8 +156,8 @@ export class MockRoomServer {
 	/** Snapshot of the simulated participants this server currently holds. */
 	simulatedPlayers(): SimulatedPlayer[] {
 		const votes = this.voteByParticipantId();
-		return [...this.sims].map(([id, name]) =>
-			this.simulatedPlayer(id, name, votes),
+		return [...this.sims].map(([id, participant]) =>
+			this.simulatedPlayer(id, participant, votes),
 		);
 	}
 
@@ -146,12 +179,13 @@ export class MockRoomServer {
 
 	private simulatedPlayer(
 		id: string,
-		name: string,
+		participant: SimulatedParticipant,
 		votes: ReadonlyMap<string, VoteChoice | null>,
 	): SimulatedPlayer {
 		return {
 			id,
-			name,
+			name: participant.name,
+			role: participant.role,
 			vote: votes.get(id) ?? null,
 		};
 	}

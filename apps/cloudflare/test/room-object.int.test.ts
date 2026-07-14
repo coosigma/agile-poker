@@ -168,6 +168,7 @@ describe('RoomDO boundary paths', () => {
 				roomId: 'room-redact',
 				name: 'Ada',
 				claimHost: true,
+				role: 'player',
 			}),
 		);
 		await guest.message(

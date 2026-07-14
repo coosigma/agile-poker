@@ -14,6 +14,7 @@ import {
 	redactRoomStateViewForParticipant,
 	revealVotes,
 	setName,
+	setRole,
 	setTicket,
 	startRound,
 	toRoomStateView,
@@ -73,6 +74,17 @@ describe('joinRoom', () => {
 		state = joinRoom(state, { id: 'p1', name: 'Alice' });
 		state = joinRoom(state, { id: 'p2', name: 'Alice' });
 		expect(state.participants.map((p) => p.name)).toEqual(['Alice', 'Alice 2']);
+	});
+
+	test('defaults claimed hosts to observer and regular joins to player', () => {
+		let state = room();
+		state = joinRoom(state, { id: 'host', name: 'Host', claimHost: true });
+		state = joinRoom(state, { id: 'guest', name: 'Guest' });
+
+		expect(state.participants).toMatchObject([
+			{ id: 'host', role: 'observer' },
+			{ id: 'guest', role: 'player' },
+		]);
 	});
 });
 
@@ -248,6 +260,57 @@ describe('voting transitions', () => {
 		state = clearVote(state, 'p1');
 		expect(state.participants[0].vote).toBeNull();
 	});
+
+	test('observers cannot cast votes', () => {
+		let state = joinRoom(room(), { id: 'host', name: 'Host' });
+		state = joinRoom(state, {
+			id: 'observer',
+			name: 'Observer',
+			role: 'observer',
+		});
+		state = setTicket(state, 'host', 'PAY-1842');
+		state = startRound(state, 'host');
+
+		const after = castVote(state, 'observer', ESTIMATE);
+
+		expect(after).toBe(state);
+		expect(
+			after.participants.find((p) => p.id === 'observer')?.vote,
+		).toBeNull();
+	});
+
+	test('switching a voted player to observer clears their vote', () => {
+		let state = joinRoom(room(), { id: 'host', name: 'Host' });
+		state = joinRoom(state, { id: 'guest', name: 'Guest' });
+		state = setTicket(state, 'host', 'PAY-1842');
+		state = startRound(state, 'host');
+		state = castVote(state, 'guest', ESTIMATE);
+
+		state = setRole(state, 'guest', 'observer');
+
+		expect(state.participants.find((p) => p.id === 'guest')).toMatchObject({
+			role: 'observer',
+			vote: null,
+		});
+	});
+
+	test('host can change another participant role but non-hosts only change themselves', () => {
+		let state = joinRoom(room(), { id: 'host', name: 'Host' });
+		state = joinRoom(state, { id: 'guest', name: 'Guest' });
+
+		state = setRole(state, 'host', 'observer', 'guest');
+		expect(state.participants.find((p) => p.id === 'guest')?.role).toBe(
+			'observer',
+		);
+
+		state = setRole(state, 'guest', 'player', 'host');
+		expect(state.participants.find((p) => p.id === 'host')?.role).toBe(
+			'player',
+		);
+		expect(state.participants.find((p) => p.id === 'guest')?.role).toBe(
+			'player',
+		);
+	});
 });
 
 describe('setName', () => {
@@ -284,6 +347,7 @@ describe('toRoomStateView', () => {
 				{
 					id: 'host',
 					name: 'Host',
+					role: 'player',
 					vote: null,
 					hasVoted: false,
 					connected: true,
@@ -292,6 +356,7 @@ describe('toRoomStateView', () => {
 				{
 					id: 'guest',
 					name: 'Guest',
+					role: 'player',
 					vote: null,
 					hasVoted: false,
 					connected: true,

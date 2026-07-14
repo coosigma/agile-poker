@@ -3,6 +3,7 @@
 	grid-template-columns: 300px 1fr;
 	min-height: 100vh;
 	align-items: start;
+	overflow: hidden;
 }
 
 .playground-sidebar {
@@ -69,6 +70,17 @@
 
 .playground-stage {
 	padding: 1.5rem;
+	min-width: 0;
+	height: 100vh;
+	overflow: auto;
+}
+
+.playground-stage .app-shell {
+	width: 100%;
+}
+
+.playground-stage .room-shell {
+	height: calc(100vh - 3rem);
 }
 
 .playground-simulate {
@@ -165,6 +177,10 @@
 	font-size: 0.75rem;
 	font-weight: 700;
 	white-space: nowrap;
+}
+
+.playground-sim-vote.is-observer {
+	color: #fbbf24;
 }
 
 .playground-sim-vote-actions {

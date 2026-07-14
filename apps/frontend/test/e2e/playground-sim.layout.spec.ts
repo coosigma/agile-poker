@@ -21,6 +21,46 @@ test('playground can manually drive simulated player votes', async ({
 	await expect(simVote).toHaveText('13');
 });
 
+test('playground can add simulated observers off the table', async ({
+	page,
+}) => {
+	await page.addInitScript(() => {
+		window.localStorage.setItem('agile-poker:language', 'en');
+	});
+	await page.goto('/playground.html');
+
+	await page.getByRole('button', { name: 'Add observer' }).click();
+
+	await expect(page.getByTestId('sim-vote-sim-1')).toHaveText('Observer');
+	await expect(
+		page.locator('.observer-row').filter({ hasText: 'Observer 1' }),
+	).toBeVisible();
+	await expect(
+		page.locator('.seat-card').filter({ hasText: 'Observer 1' }),
+	).toHaveCount(0);
+});
+
+test('observer sees vote cards but cannot submit votes', async ({ page }) => {
+	await page.addInitScript(() => {
+		window.localStorage.setItem('agile-poker:language', 'en');
+	});
+	await page.goto('/playground.html');
+
+	await page.getByLabel('Current ticket').fill('Observer view');
+	const startButton = page.locator('.control-pad-start');
+	await expect(startButton).toBeEnabled();
+	await startButton.evaluate((button: HTMLButtonElement) => button.click());
+
+	const voteCard = page.locator('.card-grid button').filter({
+		has: page.locator('span', { hasText: /^5$/ }),
+	});
+	await expect(voteCard).toBeVisible();
+	await expect(voteCard).toBeDisabled();
+	await expect(
+		page.locator('.meta-list > div').filter({ hasText: 'Voted' }),
+	).toContainText('0/0');
+});
+
 test('playground simulated player votes stay in sync after host reset', async ({
 	page,
 }) => {

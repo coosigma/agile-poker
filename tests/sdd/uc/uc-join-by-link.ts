@@ -8,11 +8,11 @@ import {
 } from '../utils/app';
 import type { UseCase } from './context';
 
-/** UC: a teammate opens the invite link and joins the same room as a Member. */
+/** UC: a teammate opens the invite link and joins the same room as a Player. */
 export const ucJoinByLink: UseCase = {
 	id: 'joinByLink',
 	description:
-		'A teammate opens the invite link, joins the same room as Member, and does not see host controls.',
+		'A teammate opens the invite link, joins the same room as Player, and does not see host controls.',
 	from: 'linkShared',
 	to: 'bothInRoom',
 	async run(ctx) {
@@ -29,7 +29,7 @@ export const ucJoinByLink: UseCase = {
 		expect(new URL(ctx.teammate.url()).searchParams.get('room')).toBe(
 			ctx.state.roomId,
 		);
-		await expect(roleBadge(ctx.teammate)).toHaveText('Member');
+		await expect(roleBadge(ctx.teammate)).toHaveText('Player');
 
 		// Host controls are not available to the teammate.
 		await expect(startRoundButton(ctx.teammate)).toBeHidden();

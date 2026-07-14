@@ -6,6 +6,7 @@ function participant(id: string, vote: VoteChoice | null): Participant {
 	return {
 		id,
 		name: id,
+		role: 'player',
 		vote,
 		hasVoted: vote !== null,
 		connected: true,

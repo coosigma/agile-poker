@@ -7,6 +7,7 @@ import {
 } from 'react';
 import { InfoTip } from '../components/InfoTip';
 import { LanguageSelector } from '../components/LanguageSelector';
+import { RoomPanel } from '../components/RoomPanel';
 import { useRoomSocket } from '../hooks/useRoomSocket';
 import { formatText, STRINGS, type Language } from '../lib/i18n';
 import { computeScoreboardStats } from '../lib/scoreboard';
@@ -77,11 +78,17 @@ export function RoomScreen({
 		null;
 	const isHost = Boolean(self?.isHost);
 	const participants = state?.participants ?? [];
+	const playerParticipants = participants.filter(
+		(participant) => participant.role === 'player',
+	);
+	const observerParticipants = participants.filter(
+		(participant) => participant.role === 'observer',
+	);
 	const completedRounds = state?.completedRounds ?? [];
-	const connectedCount = participants.filter(
+	const connectedCount = playerParticipants.filter(
 		(participant) => participant.connected,
 	).length;
-	const votedCount = participants.filter(
+	const votedCount = playerParticipants.filter(
 		(participant) => participant.hasVoted,
 	).length;
 	const savedTicketTitle = state?.ticketTitle ?? '';
@@ -116,7 +123,7 @@ export function RoomScreen({
 		? Math.min(3, Math.max(1, Math.ceil((countdownEndsAt - now) / 1000)))
 		: null;
 
-	const stats = computeScoreboardStats(participants, state?.votingState);
+	const stats = computeScoreboardStats(playerParticipants, state?.votingState);
 
 	useEffect(() => {
 		if (!isRevealCountdown) {
@@ -196,8 +203,8 @@ export function RoomScreen({
 		setPendingControl(null);
 	};
 
-	const seatLayouts = layoutSeats(participants.length, frameAspect);
-	const seats = participants.map((participant, index) => ({
+	const seatLayouts = layoutSeats(playerParticipants.length, frameAspect);
+	const seats = playerParticipants.map((participant, index) => ({
 		participant,
 		...seatLayouts[index],
 	}));
@@ -208,6 +215,8 @@ export function RoomScreen({
 			: pendingControl === 'done'
 				? copy.doneTicketConfirm
 				: null;
+	const isPlayer = self?.role === 'player';
+	const canSubmitVote = isPlayer && state?.votingState === 'voting';
 
 	return (
 		<div className="app-shell room-shell">
@@ -248,13 +257,14 @@ export function RoomScreen({
 
 			<section className="room-layout">
 				<aside className="side-panel">
-					<div className="panel">
-						<div className="panel-header">
-							<h3>{copy.roomInfo}</h3>
+					<RoomPanel
+						title={copy.roomInfo}
+						badge={
 							<span className="badge">
 								{connectedCount} {copy.connected}
 							</span>
-						</div>
+						}
+					>
 						<div className="meta-list">
 							<div>
 								<span>{copy.currentVotingState}</span>
@@ -268,20 +278,55 @@ export function RoomScreen({
 							<div>
 								<span>{copy.voted}</span>
 								<strong>
-									{votedCount}/{participants.length}
+									{votedCount}/{playerParticipants.length}
 								</strong>
 							</div>
 							<div>
 								<span>{copy.myRole}</span>
-								<strong>{isHost ? copy.host : copy.member}</strong>
+								<strong>
+									{[
+										isHost ? copy.host : null,
+										self?.role === 'observer'
+											? copy.observerRole
+											: copy.playerRole,
+									]
+										.filter(Boolean)
+										.join(' · ')}
+								</strong>
 							</div>
 						</div>
-					</div>
+						{self ? (
+							<div
+								className="role-toggle"
+								role="group"
+								aria-label={copy.roleLabel}
+							>
+								<button
+									type="button"
+									className={`role-toggle-button ${self.role === 'player' ? 'active' : ''}`}
+									onClick={() =>
+										sendMessage({ type: 'set_role', role: 'player' })
+									}
+								>
+									{copy.playerRole}
+								</button>
+								<button
+									type="button"
+									className={`role-toggle-button ${self.role === 'observer' ? 'active' : ''}`}
+									onClick={() =>
+										sendMessage({ type: 'set_role', role: 'observer' })
+									}
+								>
+									{copy.observerRole}
+								</button>
+							</div>
+						) : null}
+					</RoomPanel>
 
 					{isHost ? (
-						<div className="panel">
-							<div className="panel-header">
-								<h3>{copy.hostControls}</h3>
+						<RoomPanel
+							title={copy.hostControls}
+							actions={
 								<div className="ticket-history-actions">
 									<button
 										className="ticket-history-button"
@@ -300,7 +345,8 @@ export function RoomScreen({
 										›
 									</button>
 								</div>
-							</div>
+							}
+						>
 							<form
 								className="stack host-ticket-form"
 								onSubmit={handleTicketSubmit}
@@ -369,16 +415,18 @@ export function RoomScreen({
 									<span className="control-pad-label">{copy.doneTicket}</span>
 								</button>
 							</div>
-						</div>
+						</RoomPanel>
 					) : null}
 
-					<div className="panel completed-rounds-panel">
-						<div className="panel-header">
-							<h3>{copy.completedTickets}</h3>
+					<RoomPanel
+						title={copy.completedTickets}
+						className="completed-rounds-panel"
+						badge={
 							<span className="badge muted-badge">
 								{completedRounds.length}
 							</span>
-						</div>
+						}
+					>
 						{completedRounds.length > 0 ? (
 							<div className="completed-rounds-list">
 								{[...completedRounds].reverse().map((round, index) => (
@@ -409,7 +457,46 @@ export function RoomScreen({
 						) : (
 							<p className="empty-panel-copy">{copy.noCompletedTickets}</p>
 						)}
-					</div>
+					</RoomPanel>
+					<RoomPanel
+						title={copy.observers}
+						className="observer-panel"
+						badge={
+							<span className="badge muted-badge">
+								{observerParticipants.length}
+							</span>
+						}
+					>
+						{observerParticipants.length > 0 ? (
+							<div className="observer-list">
+								{observerParticipants.map((participant) => (
+									<div className="observer-row" key={participant.id}>
+										<span>
+											{participant.name}
+											{participant.isHost ? ` · ${copy.participantHost}` : ''}
+										</span>
+										{isHost && participant.id !== selfId ? (
+											<button
+												type="button"
+												className="role-inline-button"
+												onClick={() =>
+													sendMessage({
+														type: 'set_role',
+														participantId: participant.id,
+														role: 'player',
+													})
+												}
+											>
+												{copy.makePlayer}
+											</button>
+										) : null}
+									</div>
+								))}
+							</div>
+						) : (
+							<p className="empty-panel-copy">{copy.noObservers}</p>
+						)}
+					</RoomPanel>
 				</aside>
 
 				<main className="table-zone">
@@ -458,6 +545,21 @@ export function RoomScreen({
 									{participant.name}
 									{participant.isHost ? ` · ${copy.participantHost}` : ''}
 								</span>
+								{isHost && participant.id !== selfId ? (
+									<button
+										type="button"
+										className="seat-role-button"
+										onClick={() =>
+											sendMessage({
+												type: 'set_role',
+												participantId: participant.id,
+												role: 'observer',
+											})
+										}
+									>
+										{copy.makeObserver}
+									</button>
+								) : null}
 								<strong>
 									{state?.votingState === 'revealed'
 										? voteLabel(participant.vote, language)
@@ -491,13 +593,17 @@ export function RoomScreen({
 				</main>
 
 				<aside className="side-panel">
-					<div className="panel">
-						<div className="panel-header">
-							<h3>{copy.voteCards}</h3>
+					<RoomPanel
+						title={copy.voteCards}
+						badge={
 							<span className="badge muted-badge">
 								{voteLabel(self?.vote ?? null, language)}
 							</span>
-						</div>
+						}
+					>
+						{self?.role === 'observer' ? (
+							<p className="empty-panel-copy">{copy.observerVoteHelp}</p>
+						) : null}
 						<div className="modifier-section">
 							<div className="modifier-header">
 								<strong>{copy.optionalModifier}</strong>
@@ -540,7 +646,7 @@ export function RoomScreen({
 										key={value}
 										type="button"
 										className={`vote-card ${active ? 'active' : ''}`}
-										disabled={state?.votingState !== 'voting'}
+										disabled={!canSubmitVote}
 										onClick={() =>
 											sendMessage({
 												type: 'vote',
@@ -569,7 +675,7 @@ export function RoomScreen({
 										key={value}
 										type="button"
 										className={`vote-card special-card ${active ? 'active' : ''}`}
-										disabled={state?.votingState !== 'voting'}
+										disabled={!canSubmitVote}
 										onClick={() =>
 											sendMessage({
 												type: 'vote',
@@ -588,12 +694,12 @@ export function RoomScreen({
 						<button
 							className="vote-card clear-card"
 							type="button"
-							disabled={state?.votingState !== 'voting'}
+							disabled={!canSubmitVote}
 							onClick={() => sendMessage({ type: 'clear_vote' })}
 						>
 							{copy.clearVote}
 						</button>
-					</div>
+					</RoomPanel>
 				</aside>
 			</section>
 			{error ? <p className="error-text center-text">{error}</p> : null}
