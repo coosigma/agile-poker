@@ -175,6 +175,7 @@ test('playground shows a countdown before revealing votes', async ({
 	const countdown = page.getByTestId('reveal-countdown');
 	await expect(countdown).toBeVisible();
 	await expect(countdown).toContainText(/[123]/);
+	await expect(countdown).not.toContainText('Revealing');
 	const ticketInput = page.getByLabel('Current ticket');
 	await expect(ticketInput).toHaveAttribute('readonly', '');
 	await ticketInput.click();
@@ -196,4 +197,28 @@ test('playground shows a countdown before revealing votes', async ({
 		.locator('.control-pad-done')
 		.evaluate((button: HTMLButtonElement) => button.click());
 	await expect(ticketInput).toHaveValue('');
+	const historySlide = page.locator('.ticket-history-slide');
+	await expect(historySlide.locator('.ticket-history-self-vote')).toHaveCount(
+		0,
+	);
+	await page.locator('.self-role-menu summary').click();
+	await page
+		.locator('.self-role-menu')
+		.getByRole('button', { name: 'Player' })
+		.click();
+	await expect(historySlide.locator('.ticket-history-self-vote')).toContainText(
+		'You:',
+	);
+	await expect(historySlide.locator('.ticket-history-self-vote')).toContainText(
+		'Not voted',
+	);
+	await expect(historySlide.locator('.ticket-history-stats')).toContainText(
+		'1',
+	);
+	await expect(historySlide.locator('.ticket-history-stats')).toContainText(
+		'0.5',
+	);
+	await expect(historySlide.locator('.ticket-history-stats')).toContainText(
+		'0.0',
+	);
 });

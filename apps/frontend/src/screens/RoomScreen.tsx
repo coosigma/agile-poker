@@ -10,12 +10,13 @@ import { InfoTip } from '../components/InfoTip';
 import { LanguageSelector } from '../components/LanguageSelector';
 import { RoomPanel } from '../components/RoomPanel';
 import { useRoomSocket } from '../hooks/useRoomSocket';
-import { formatText, STRINGS, type Language } from '../lib/i18n';
+import { STRINGS, type Language } from '../lib/i18n';
 import { computeScoreboardStats } from '../lib/scoreboard';
 import {
 	getVotingStateLabel,
 	layoutSeats,
 	roomShareUrl,
+	voteNumericValue,
 	voteLabel,
 } from '../lib/poker';
 import {
@@ -247,8 +248,12 @@ export function RoomScreen({
 				className="ticket-history-button"
 				type="button"
 				aria-label={copy.previousTicket}
-				disabled={ticketHistoryIndex <= 0}
-				onClick={() => setTicketHistoryIndex((index) => Math.max(0, index - 1))}
+				disabled={ticketHistoryIndex >= ticketHistory.length - 1}
+				onClick={() =>
+					setTicketHistoryIndex((index) =>
+						Math.min(Math.max(0, ticketHistory.length - 1), index + 1),
+					)
+				}
 			>
 				‹
 			</button>
@@ -256,12 +261,8 @@ export function RoomScreen({
 				className="ticket-history-button"
 				type="button"
 				aria-label={copy.nextTicket}
-				disabled={ticketHistoryIndex >= ticketHistory.length - 1}
-				onClick={() =>
-					setTicketHistoryIndex((index) =>
-						Math.min(Math.max(0, ticketHistory.length - 1), index + 1),
-					)
-				}
+				disabled={ticketHistoryIndex <= 0}
+				onClick={() => setTicketHistoryIndex((index) => Math.max(0, index - 1))}
 			>
 				›
 			</button>
@@ -273,6 +274,30 @@ export function RoomScreen({
 			setTicketHistoryIndex(Math.max(0, ticketHistory.length - 1));
 		}
 	}, [ticketHistory.length, ticketHistoryIndex]);
+	const currentHistoryNumericVotes =
+		currentHistory?.votes
+			.map((completedVote) => voteNumericValue(completedVote.vote))
+			.filter((value): value is number => value !== null) ?? [];
+	const currentHistoryMean =
+		currentHistoryNumericVotes.length > 0
+			? currentHistoryNumericVotes.reduce((sum, value) => sum + value, 0) /
+				currentHistoryNumericVotes.length
+			: 0;
+	const currentHistoryStdDev =
+		currentHistoryNumericVotes.length > 0
+			? Math.sqrt(
+					currentHistoryNumericVotes.reduce(
+						(sum, value) => sum + (value - currentHistoryMean) ** 2,
+						0,
+					) / currentHistoryNumericVotes.length,
+				)
+			: 0;
+	const currentHistorySelfVote =
+		self?.role === 'player'
+			? currentHistory?.votes.find((vote) => vote.participantId === selfId)
+			: null;
+	const shouldShowCurrentHistorySelfVote =
+		self?.role === 'player' && Boolean(currentHistory);
 
 	const ticketHistorySlides = (showTitle: boolean) => (
 		<div className="ticket-history">
@@ -285,20 +310,36 @@ export function RoomScreen({
 				<article className="completed-round-card ticket-history-slide">
 					<div className="completed-round-title">
 						<strong>{currentHistory.ticketTitle}</strong>
-						<span>
-							{currentHistory.votes.length} {copy.statVotes}
-						</span>
-					</div>
-					<div className="completed-votes">
-						{currentHistory.votes.map((completedVote) => (
-							<span
-								className="completed-vote-pill"
-								key={`${currentHistory.ticketTitle}-${completedVote.participantId}`}
-							>
-								{completedVote.participantName}:{' '}
-								{voteLabel(completedVote.vote, language)}
+						{shouldShowCurrentHistorySelfVote ? (
+							<span className="ticket-history-self-vote">
+								<span>{copy.yourVote}:</span>
+								<strong>
+									{voteLabel(currentHistorySelfVote?.vote ?? null, language)}
+								</strong>
 							</span>
-						))}
+						) : null}
+					</div>
+					<div className="ticket-history-stats">
+						<div>
+							<strong>{currentHistory.votes.length}</strong>
+							<span>{copy.statVotes}</span>
+						</div>
+						<div>
+							<strong>
+								{currentHistoryNumericVotes.length > 0
+									? currentHistoryMean.toFixed(1)
+									: '0'}
+							</strong>
+							<span>{copy.statMean}</span>
+						</div>
+						<div>
+							<strong>
+								{currentHistoryNumericVotes.length > 0
+									? currentHistoryStdDev.toFixed(1)
+									: '0'}
+							</strong>
+							<span>{copy.statStdDev}</span>
+						</div>
 					</div>
 				</article>
 			) : (
@@ -651,23 +692,6 @@ export function RoomScreen({
 									</small>
 								</article>
 							))}
-							{revealCountdownSeconds !== null ? (
-								<div
-									className="countdown-overlay"
-									role="status"
-									aria-live="polite"
-									data-testid="reveal-countdown"
-								>
-									<div>
-										<span>{revealCountdownSeconds}</span>
-										<small>
-											{formatText(copy.revealCountdown, {
-												seconds: revealCountdownSeconds,
-											})}
-										</small>
-									</div>
-								</div>
-							) : null}
 						</div>
 						<div className="observer-bench" aria-label={copy.observers}>
 							<span className="observer-bench-label">{copy.observers}</span>
@@ -686,6 +710,18 @@ export function RoomScreen({
 								</article>
 							))}
 						</div>
+						{revealCountdownSeconds !== null ? (
+							<div
+								className="countdown-overlay"
+								role="status"
+								aria-live="polite"
+								data-testid="reveal-countdown"
+							>
+								<div>
+									<span>{revealCountdownSeconds}</span>
+								</div>
+							</div>
+						) : null}
 					</div>
 				</main>
 
