@@ -21,7 +21,7 @@ const hostHistorySpecific: readonly UseCaseManifestEntry[] = [
 		from: 'hostTransferred',
 		to: 'historyVerified',
 		description:
-			'The transferred host completes two tickets and verifies Tickets history stats and navigation.',
+			'The transferred host completes multiple tickets and verifies Tickets history stats, special-vote handling, and navigation.',
 	},
 ];
 

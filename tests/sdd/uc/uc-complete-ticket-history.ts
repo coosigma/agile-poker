@@ -1,6 +1,7 @@
 import {
 	castNumericVote,
 	castNumericVoteWithModifier,
+	castSpecialVote,
 	clickDone,
 	clickReveal,
 	clickStartRound,
@@ -17,6 +18,7 @@ import type { UseCase } from './context';
 
 const ROUND_1_TICKET = 'PAY-101 Login form';
 const ROUND_2_TICKET = 'PAY-102 Checkout flow';
+const ROUND_3_TICKET = 'PAY-103 Unknown legacy module';
 
 async function completeFirstRound(newHost: Page, formerHost: Page) {
 	await setTicket(newHost, ROUND_1_TICKET);
@@ -32,6 +34,15 @@ async function completeSecondRound(newHost: Page, formerHost: Page) {
 	await clickStartRound(newHost);
 	await castNumericVoteWithModifier(newHost, '3', 'More');
 	await castNumericVote(formerHost, '5');
+	await clickReveal(newHost);
+	await clickDone(newHost);
+}
+
+async function completeThirdRound(newHost: Page, formerHost: Page) {
+	await setTicket(newHost, ROUND_3_TICKET);
+	await clickStartRound(newHost);
+	await castSpecialVote(newHost, '?');
+	await castNumericVote(formerHost, '8');
 	await clickReveal(newHost);
 	await clickDone(newHost);
 }
@@ -52,11 +63,20 @@ async function expectHistoryRound2(page: Page) {
 	await expect(ticketHistorySelfVote(page)).toContainText('3♯');
 }
 
-/** UC: the new host completes two tickets and verifies Tickets history. */
+async function expectHistoryRound3(page: Page) {
+	await expect(ticketHistoryTitle(page)).toHaveText(ROUND_3_TICKET);
+	await expect(ticketHistoryStat(page, 'Votes')).toHaveText('2');
+	await expect(ticketHistoryStat(page, 'Mean')).toHaveText('8.0');
+	await expect(ticketHistoryStat(page, 'Std dev')).toHaveText('0.0');
+	await expect(ticketHistorySelfVote(page)).toContainText('You:');
+	await expect(ticketHistorySelfVote(page)).toContainText('?');
+}
+
+/** UC: the new host completes multiple tickets and verifies Tickets history. */
 export const ucCompleteTicketHistory: UseCase = {
 	id: 'completeTicketHistory',
 	description:
-		'The transferred host completes two tickets; Tickets history shows latest first, stats, self vote, and older/newer navigation.',
+		'The transferred host completes multiple tickets; Tickets history shows latest first, stats, special-vote handling, self vote, and older/newer navigation.',
 	from: 'hostTransferred',
 	to: 'historyVerified',
 	async run(ctx) {
@@ -69,9 +89,16 @@ export const ucCompleteTicketHistory: UseCase = {
 		await completeSecondRound(newHost, formerHost);
 		await expectHistoryRound2(newHost);
 
+		await completeThirdRound(newHost, formerHost);
+		await expectHistoryRound3(newHost);
+
+		await olderTicketButton(newHost).click();
+		await expectHistoryRound2(newHost);
 		await olderTicketButton(newHost).click();
 		await expectHistoryRound1(newHost);
 		await newerTicketButton(newHost).click();
 		await expectHistoryRound2(newHost);
+		await newerTicketButton(newHost).click();
+		await expectHistoryRound3(newHost);
 	},
 };

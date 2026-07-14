@@ -23,7 +23,9 @@ older results.
 4. The original host transfers host status to the teammate.
 5. The new host completes a first ticket.
 6. The new host completes a second ticket.
-7. The new host checks Tickets history: the latest ticket is shown first, older
+7. The new host completes a third ticket where their own vote is a special
+   `?` card and the other player casts a numeric estimate.
+8. The new host checks Tickets history: the latest ticket is shown first, older
    navigation reveals the previous ticket, and newer navigation returns to the
    latest ticket.
 
@@ -35,3 +37,5 @@ older results.
 3. Tickets history shows `Votes`, `Mean`, and `Std dev` for completed tickets.
 4. Tickets history shows the current player's `You:` vote for the new host.
 5. History navigation moves left to older tickets and right to newer tickets.
+6. Special votes are counted in `Votes`, but are not included in `Mean` or
+   `Std dev`.

@@ -105,6 +105,12 @@ export function numericCard(page: Page, value: string): Locator {
 	});
 }
 
+export function specialCard(page: Page, value: '?' | '∞'): Locator {
+	return page.locator('.special-card-row button').filter({
+		hasText: new RegExp(`^${escapeRegExp(value)}$`),
+	});
+}
+
 export function startRoundButton(page: Page): Locator {
 	return page.getByRole('button', { name: 'Start', exact: true });
 }
@@ -312,6 +318,13 @@ export async function castNumericVoteWithModifier(
 ): Promise<void> {
 	await page.getByRole('button', { name: modifier, exact: true }).click();
 	await castNumericVote(page, value);
+}
+
+export async function castSpecialVote(
+	page: Page,
+	value: '?' | '∞',
+): Promise<void> {
+	await specialCard(page, value).click();
 }
 
 /** Host reveals the votes. */
