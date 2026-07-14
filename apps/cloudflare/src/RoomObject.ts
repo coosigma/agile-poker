@@ -7,6 +7,7 @@ import {
 import {
 	applyMessage,
 	decodeClientFrame,
+	finishRevealCountdown,
 	leave,
 	makeRoomRuntime,
 	setRoomId,
@@ -32,6 +33,7 @@ function randomId(): string {
 export class RoomDO implements DurableObject {
 	private readonly runtime: RoomRuntime;
 	private readonly sockets = new Map<string, WebSocket>();
+	private revealCountdownTimer: ReturnType<typeof setTimeout> | null = null;
 
 	constructor(private readonly state: DurableObjectState) {
 		this.runtime = makeRoomRuntime(createRoomState(this.state.id.toString()));
@@ -76,6 +78,26 @@ export class RoomDO implements DurableObject {
 		}
 	}
 
+	private scheduleRevealCountdown(view: RoomStateView): void {
+		if (
+			view.votingState !== 'countdown' ||
+			view.revealCountdownEndsAt === null
+		) {
+			return;
+		}
+		if (this.revealCountdownTimer) {
+			clearTimeout(this.revealCountdownTimer);
+		}
+		this.revealCountdownTimer = setTimeout(
+			async () => {
+				this.revealCountdownTimer = null;
+				const next = await this.runtime.runPromise(finishRevealCountdown);
+				this.broadcast(next);
+			},
+			Math.max(0, view.revealCountdownEndsAt - Date.now()),
+		);
+	}
+
 	private handleWebSocket(request: Request): Response {
 		if (request.headers.get('Upgrade') !== 'websocket') {
 			return new Response('Expected WebSocket', { status: 426 });
@@ -113,6 +135,7 @@ export class RoomDO implements DurableObject {
 				this.sockets.set(id, server);
 				const view = await this.runtime.runPromise(applyMessage(id, message));
 				this.broadcast(view);
+				this.scheduleRevealCountdown(view);
 				return;
 			}
 
@@ -124,6 +147,7 @@ export class RoomDO implements DurableObject {
 				applyMessage(participantId, message),
 			);
 			this.broadcast(view);
+			this.scheduleRevealCountdown(view);
 		});
 
 		server.addEventListener('close', async () => {

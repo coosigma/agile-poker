@@ -1,7 +1,13 @@
 import { describe, expect, test } from 'vitest';
 import { createRoomState } from './room-state.js';
 import { makeRoomRuntime } from './runtime.js';
-import { applyMessage, leave, roomView, setRoomId } from './use-cases.js';
+import {
+	applyMessage,
+	finishRevealCountdown,
+	leave,
+	roomView,
+	setRoomId,
+} from './use-cases.js';
 
 /**
  * Exercises the service + use case + runtime slice end to end: a per-room
@@ -54,7 +60,10 @@ describe('room use cases through a per-room runtime', () => {
 		const revealed = await runtime.runPromise(
 			applyMessage('host', { type: 'reveal_votes' }),
 		);
-		expect(revealed.votingState).toBe('revealed');
+		expect(revealed.votingState).toBe('countdown');
+
+		const finished = await runtime.runPromise(finishRevealCountdown);
+		expect(finished.votingState).toBe('revealed');
 		await runtime.dispose();
 	});
 

@@ -13,6 +13,7 @@
  */
 import {
 	applyClientMessage,
+	completeRevealCountdown,
 	createRoomState,
 	leaveRoom,
 	redactRoomStateViewForParticipant,
@@ -47,6 +48,7 @@ export class MockRoomServer {
 	private counter = 0;
 	private readonly sims = new Map<string, string>();
 	private simCounter = 0;
+	private revealCountdownTimer: ReturnType<typeof setTimeout> | null = null;
 
 	constructor(roomId: string) {
 		this.state = createRoomState(roomId);
@@ -62,7 +64,7 @@ export class MockRoomServer {
 		this.simCounter += 1;
 		const id = `sim-${this.simCounter}`;
 		const displayName = name?.trim() || `Sim ${this.simCounter}`;
-		this.state = applyClientMessage(this.state, id, {
+		this.applyMessage(id, {
 			type: 'join_room',
 			roomId: this.state.roomId,
 			name: displayName,
@@ -71,7 +73,7 @@ export class MockRoomServer {
 		if (this.state.votingState === 'voting') {
 			const base =
 				SIM_VOTE_BASES[(this.simCounter - 1) % SIM_VOTE_BASES.length];
-			this.state = applyClientMessage(this.state, id, {
+			this.applyMessage(id, {
 				type: 'vote',
 				vote: { kind: 'estimate', base, modifier: 'flat' },
 			});
@@ -85,7 +87,7 @@ export class MockRoomServer {
 		if (!this.sims.has(id)) {
 			return;
 		}
-		this.state = applyClientMessage(this.state, id, { type: 'vote', vote });
+		this.applyMessage(id, { type: 'vote', vote });
 		this.broadcast();
 	}
 
@@ -93,7 +95,7 @@ export class MockRoomServer {
 		if (!this.sims.has(id)) {
 			return;
 		}
-		this.state = applyClientMessage(this.state, id, { type: 'clear_vote' });
+		this.applyMessage(id, { type: 'clear_vote' });
 		this.broadcast();
 	}
 
@@ -160,7 +162,7 @@ export class MockRoomServer {
 	 * previewed client connects.
 	 */
 	seed(participantId: string, message: ClientMessage): void {
-		this.state = applyClientMessage(this.state, participantId, message);
+		this.applyMessage(participantId, message, { completeCountdown: true });
 	}
 
 	/** Register a live client. The returned handle mirrors a socket lifecycle. */
@@ -177,7 +179,7 @@ export class MockRoomServer {
 				if (participantId === null) {
 					return;
 				}
-				this.state = applyClientMessage(this.state, participantId, message);
+				this.applyMessage(participantId, message);
 				this.broadcast();
 			},
 			close: () => {
@@ -204,5 +206,45 @@ export class MockRoomServer {
 		for (const listener of this.listeners) {
 			listener();
 		}
+	}
+
+	private applyMessage(
+		participantId: string,
+		message: ClientMessage,
+		options: { readonly completeCountdown?: boolean } = {},
+	): void {
+		this.state = applyClientMessage(this.state, participantId, message);
+		if (this.state.votingState !== 'countdown') {
+			return;
+		}
+		if (options.completeCountdown) {
+			this.state = completeRevealCountdown(this.state);
+			return;
+		}
+		this.scheduleRevealCountdown();
+	}
+
+	private scheduleRevealCountdown(): void {
+		if (
+			this.state.votingState !== 'countdown' ||
+			this.state.revealCountdownEndsAt === null
+		) {
+			return;
+		}
+		if (this.revealCountdownTimer) {
+			clearTimeout(this.revealCountdownTimer);
+		}
+		this.revealCountdownTimer = setTimeout(
+			() => {
+				this.revealCountdownTimer = null;
+				const next = completeRevealCountdown(this.state);
+				if (next === this.state) {
+					return;
+				}
+				this.state = next;
+				this.broadcast();
+			},
+			Math.max(0, this.state.revealCountdownEndsAt - Date.now()),
+		);
 	}
 }

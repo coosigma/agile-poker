@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { RoomDO } from '../src/RoomObject.ts';
 import {
 	fakeDurableObjectState,
@@ -25,6 +25,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+	vi.useRealTimers();
 	platform.restore();
 });
 
@@ -209,8 +210,18 @@ describe('RoomDO boundary paths', () => {
 			}),
 		]);
 
+		vi.useFakeTimers();
 		await host.message(JSON.stringify({ type: 'reveal_votes' }));
+		expect(
+			(host.lastFrame()?.state as { votingState: string }).votingState,
+		).toBe('countdown');
+		expect(roster(host).map((participant) => participant.vote)).toEqual([
+			{ kind: 'estimate', base: '5', modifier: 'base' },
+			null,
+		]);
 
+		await vi.advanceTimersByTimeAsync(3000);
+		vi.useRealTimers();
 		expect(roster(host).map((participant) => participant.vote)).toEqual([
 			{ kind: 'estimate', base: '5', modifier: 'base' },
 			{ kind: 'estimate', base: '8', modifier: 'base' },

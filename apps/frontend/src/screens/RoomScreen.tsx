@@ -8,7 +8,7 @@ import {
 import { InfoTip } from '../components/InfoTip';
 import { LanguageSelector } from '../components/LanguageSelector';
 import { useRoomSocket } from '../hooks/useRoomSocket';
-import { STRINGS, type Language } from '../lib/i18n';
+import { formatText, STRINGS, type Language } from '../lib/i18n';
 import { computeScoreboardStats } from '../lib/scoreboard';
 import {
 	getVotingStateLabel,
@@ -45,6 +45,7 @@ export function RoomScreen({
 	const [pendingControl, setPendingControl] = useState<
 		'reset' | 'reveal' | 'done' | null
 	>(null);
+	const [now, setNow] = useState(() => Date.now());
 
 	// Seats are distributed by pixel arc length, which needs the table frame's
 	// aspect ratio (width / height). Measure it and keep it current on resize.
@@ -108,8 +109,30 @@ export function RoomScreen({
 		hasSavedTicket &&
 		!hasUnsavedTicketChange &&
 		state?.votingState === 'revealed';
+	const countdownEndsAt = state?.revealCountdownEndsAt ?? null;
+	const isRevealCountdown =
+		state?.votingState === 'countdown' && countdownEndsAt !== null;
+	const revealCountdownSeconds = isRevealCountdown
+		? Math.min(3, Math.max(1, Math.ceil((countdownEndsAt - now) / 1000)))
+		: null;
 
 	const stats = computeScoreboardStats(participants, state?.votingState);
+
+	useEffect(() => {
+		if (!isRevealCountdown) {
+			return;
+		}
+		const initialTimer = window.setTimeout(() => {
+			setNow(Date.now());
+		}, 0);
+		const timer = window.setInterval(() => {
+			setNow(Date.now());
+		}, 100);
+		return () => {
+			window.clearTimeout(initialTimer);
+			window.clearInterval(timer);
+		};
+	}, [countdownEndsAt, isRevealCountdown]);
 
 	useEffect(() => {
 		if (
@@ -447,6 +470,23 @@ export function RoomScreen({
 								</small>
 							</article>
 						))}
+						{revealCountdownSeconds !== null ? (
+							<div
+								className="countdown-overlay"
+								role="status"
+								aria-live="assertive"
+								data-testid="reveal-countdown"
+							>
+								<div>
+									<span>{revealCountdownSeconds}</span>
+									<small>
+										{formatText(copy.revealCountdown, {
+											seconds: revealCountdownSeconds,
+										})}
+									</small>
+								</div>
+							</div>
+						) : null}
 					</div>
 				</main>
 

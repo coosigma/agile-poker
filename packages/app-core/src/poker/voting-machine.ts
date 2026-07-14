@@ -4,6 +4,7 @@ export const VOTING_STATES = [
 	'noTopic',
 	'ready',
 	'voting',
+	'countdown',
 	'revealed',
 	'completed',
 ] as const;
@@ -17,6 +18,7 @@ export type VotingMachineEvent =
 	| { readonly type: 'VOTE' }
 	| { readonly type: 'RESET' }
 	| { readonly type: 'REVEAL' }
+	| { readonly type: 'COUNTDOWN_DONE' }
 	| { readonly type: 'DONE' }
 	| { readonly type: 'START_NEXT_TOPIC' };
 
@@ -40,8 +42,13 @@ export const votingMachine = createMachine({
 			on: {
 				CLEAR_TOPIC: 'noTopic',
 				RESET: 'voting',
-				REVEAL: 'revealed',
+				REVEAL: 'countdown',
 				VOTE: 'voting',
+			},
+		},
+		countdown: {
+			on: {
+				COUNTDOWN_DONE: 'revealed',
 			},
 		},
 		revealed: {
