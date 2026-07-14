@@ -1520,6 +1520,24 @@ input {
 	min-height: 66px;
 }
 
+.vote-submit-button {
+	min-height: 0;
+	margin-top: 10px;
+	padding: 11px;
+	width: 100%;
+	background: linear-gradient(
+		135deg,
+		rgba(246, 178, 83, 0.28),
+		rgba(142, 199, 255, 0.16)
+	);
+	font-weight: 700;
+}
+
+.vote-submit-button:disabled {
+	color: var(--text-muted);
+	background: rgba(255, 255, 255, 0.04);
+}
+
 .clear-card {
 	min-height: 0;
 	margin-top: 10px;

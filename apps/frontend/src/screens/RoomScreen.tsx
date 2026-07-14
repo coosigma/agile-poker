@@ -23,6 +23,8 @@ import {
 	MODIFIER_OPTIONS,
 	NUMERIC_CARD_VALUES,
 	SPECIAL_CARD_VALUES,
+	type NumericCardValue,
+	type SpecialCardValue,
 	type VoteModifier,
 } from '../types';
 
@@ -45,6 +47,10 @@ export function RoomScreen({
 
 	const [ticketDraft, setTicketDraft] = useState('');
 	const [modifier, setModifier] = useState<VoteModifier>('base');
+	const [selectedNumericVote, setSelectedNumericVote] =
+		useState<NumericCardValue | null>(null);
+	const [selectedSpecialVote, setSelectedSpecialVote] =
+		useState<SpecialCardValue | null>(null);
 	const [pendingControl, setPendingControl] = useState<
 		'reset' | 'reveal' | null
 	>(null);
@@ -138,6 +144,11 @@ export function RoomScreen({
 		: null;
 
 	const stats = computeScoreboardStats(playerParticipants, state?.votingState);
+	const isPlayer = self?.role === 'player';
+	const canSubmitVote = isPlayer && state?.votingState === 'voting';
+	const canSubmitSelectedVote =
+		canSubmitVote &&
+		(selectedNumericVote !== null || selectedSpecialVote !== null);
 
 	useEffect(() => {
 		if (!isRevealCountdown) {
@@ -169,6 +180,13 @@ export function RoomScreen({
 			setShowTicketLockedNotice(false);
 		}
 	}, [isTicketLockedUntilDone]);
+
+	useEffect(() => {
+		if (!canSubmitVote) {
+			setSelectedNumericVote(null);
+			setSelectedSpecialVote(null);
+		}
+	}, [canSubmitVote]);
 
 	const handleTicketSubmit = (event: FormEvent) => {
 		event.preventDefault();
@@ -222,6 +240,38 @@ export function RoomScreen({
 		setPendingControl(null);
 	};
 
+	const handleSubmitVote = () => {
+		if (!canSubmitSelectedVote) {
+			return;
+		}
+		if (selectedSpecialVote) {
+			sendMessage({
+				type: 'vote',
+				vote: {
+					kind: 'special',
+					value: selectedSpecialVote,
+				},
+			});
+			return;
+		}
+		if (selectedNumericVote !== null) {
+			sendMessage({
+				type: 'vote',
+				vote: {
+					kind: 'estimate',
+					base: selectedNumericVote,
+					modifier,
+				},
+			});
+		}
+	};
+
+	const handleClearVote = () => {
+		setSelectedNumericVote(null);
+		setSelectedSpecialVote(null);
+		sendMessage({ type: 'clear_vote' });
+	};
+
 	const hostIsPlayer = hostParticipant?.role === 'player';
 	const tableSeatLayouts = layoutSeats(
 		seatedParticipants.length + (hostIsPlayer ? 1 : 0),
@@ -238,8 +288,6 @@ export function RoomScreen({
 
 	const confirmPrompt =
 		pendingControl === 'reset' ? copy.resetRoundConfirm : null;
-	const isPlayer = self?.role === 'player';
-	const canSubmitVote = isPlayer && state?.votingState === 'voting';
 	const ticketHistory = [...completedRounds].reverse();
 	const currentHistory = ticketHistory[ticketHistoryIndex] ?? null;
 	const ticketHistoryActions = (
@@ -770,53 +818,36 @@ export function RoomScreen({
 						<div className="card-grid">
 							{NUMERIC_CARD_VALUES.map((value) => {
 								const active =
-									self?.vote?.kind === 'estimate' &&
-									self.vote.base === value &&
-									self.vote.modifier === modifier;
+									selectedSpecialVote === null && selectedNumericVote === value;
 								return (
 									<button
 										key={value}
 										type="button"
 										className={`vote-card ${active ? 'active' : ''}`}
 										disabled={!canSubmitVote}
-										onClick={() =>
-											sendMessage({
-												type: 'vote',
-												vote: {
-													kind: 'estimate',
-													base: value,
-													modifier,
-												},
-											})
-										}
+										onClick={() => {
+											setSelectedNumericVote(value);
+											setSelectedSpecialVote(null);
+										}}
 									>
 										<span>{value}</span>
-										{modifier !== 'base' ? (
-											<small>{modifier === 'flat' ? '♭' : '♯'}</small>
-										) : null}
 									</button>
 								);
 							})}
 						</div>
 						<div className="special-card-row">
 							{SPECIAL_CARD_VALUES.map((value) => {
-								const active =
-									self?.vote?.kind === 'special' && self.vote.value === value;
+								const active = selectedSpecialVote === value;
 								return (
 									<button
 										key={value}
 										type="button"
 										className={`vote-card special-card ${active ? 'active' : ''}`}
 										disabled={!canSubmitVote}
-										onClick={() =>
-											sendMessage({
-												type: 'vote',
-												vote: {
-													kind: 'special',
-													value,
-												},
-											})
-										}
+										onClick={() => {
+											setSelectedSpecialVote(value);
+											setSelectedNumericVote(null);
+										}}
 									>
 										{value}
 									</button>
@@ -824,10 +855,18 @@ export function RoomScreen({
 							})}
 						</div>
 						<button
+							className="vote-card vote-submit-button"
+							type="button"
+							disabled={!canSubmitSelectedVote}
+							onClick={handleSubmitVote}
+						>
+							{copy.submitVote}
+						</button>
+						<button
 							className="vote-card clear-card"
 							type="button"
 							disabled={!canSubmitVote}
-							onClick={() => sendMessage({ type: 'clear_vote' })}
+							onClick={handleClearVote}
 						>
 							{copy.clearVote}
 						</button>

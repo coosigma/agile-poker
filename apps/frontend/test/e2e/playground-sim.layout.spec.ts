@@ -67,7 +67,44 @@ test('observer sees vote cards but cannot submit votes', async ({ page }) => {
 	await expect(
 		page.locator('.panel').filter({ hasText: 'Vote cards' }).locator('.badge'),
 	).toHaveText('Disabled');
+	await expect(page.getByRole('button', { name: 'Submit' })).toBeDisabled();
 	await expect(page.getByText('Observers do not vote')).toHaveCount(0);
+});
+
+test('vote cards submit selected point and modifier together', async ({
+	page,
+}) => {
+	await page.addInitScript(() => {
+		window.localStorage.setItem('agile-poker:language', 'en');
+	});
+	await page.goto('/playground.html');
+
+	await page.getByLabel('Current ticket').fill('Draft vote');
+	const startButton = page.locator('.control-pad-start');
+	await expect(startButton).toBeEnabled();
+	await startButton.evaluate((button: HTMLButtonElement) => button.click());
+	await page.locator('.self-role-menu summary').click();
+	await page
+		.locator('.self-role-menu')
+		.getByRole('button', { name: 'Player' })
+		.click();
+
+	const votePanel = page.locator('.panel').filter({ hasText: 'Vote cards' });
+	await expect(votePanel.locator('.badge')).toHaveText('Not voted');
+	await expect(page.getByRole('button', { name: 'Submit' })).toBeDisabled();
+
+	await page.getByRole('button', { name: 'More' }).click();
+	await expect(page.getByRole('button', { name: 'Submit' })).toBeDisabled();
+	await page
+		.locator('.card-grid button')
+		.filter({
+			has: page.locator('span', { hasText: /^5$/ }),
+		})
+		.click();
+	await expect(votePanel.locator('.badge')).toHaveText('Not voted');
+
+	await page.getByRole('button', { name: 'Submit' }).click();
+	await expect(votePanel.locator('.badge')).toHaveText('5♯');
 });
 
 test('self role changes through the edit menu', async ({ page }) => {
