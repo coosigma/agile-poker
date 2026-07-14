@@ -12,7 +12,8 @@ export interface RoomStateView {
 	readonly roomId: string;
 	readonly roomState: 'empty' | 'active';
 	readonly votingState:
-		'noTopic' | 'ready' | 'voting' | 'revealed' | 'completed';
+		'noTopic' | 'ready' | 'voting' | 'countdown' | 'revealed' | 'completed';
+	readonly revealCountdownEndsAt: number | null;
 	readonly ticketTitle: string;
 	readonly participants: readonly {
 		readonly id: string;

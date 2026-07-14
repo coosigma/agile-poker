@@ -14,5 +14,11 @@ export {
 	decodeClientMessage,
 } from './schema.js';
 export { RoomStore, makeRoomStoreLayer } from './room-store.js';
-export { applyMessage, leave, roomView, setRoomId } from './use-cases.js';
+export {
+	applyMessage,
+	finishRevealCountdown,
+	leave,
+	roomView,
+	setRoomId,
+} from './use-cases.js';
 export { makeRoomRuntime, type RoomRuntime } from './runtime.js';

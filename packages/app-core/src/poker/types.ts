@@ -67,6 +67,7 @@ export interface RoomState {
 	readonly roomId: string;
 	readonly roomState: RoomMachineState;
 	readonly votingState: VotingMachineState;
+	readonly revealCountdownEndsAt: number | null;
 	readonly hostId: string | null;
 	readonly ticketTitle: string;
 	readonly participants: readonly Participant[];
@@ -88,6 +89,7 @@ export interface RoomStateView {
 	readonly roomId: string;
 	readonly roomState: RoomMachineState;
 	readonly votingState: VotingMachineState;
+	readonly revealCountdownEndsAt: number | null;
 	readonly ticketTitle: string;
 	readonly participants: readonly ParticipantView[];
 	readonly completedRounds: readonly CompletedRound[];

@@ -22,6 +22,7 @@ function makeRoomState(overrides: Partial<RoomState> = {}): RoomState {
 		roomId: 'ABC',
 		roomState: 'active',
 		votingState: 'noTopic',
+		revealCountdownEndsAt: null,
 		ticketTitle: '',
 		completedRounds: [],
 		participants: [

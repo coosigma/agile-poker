@@ -104,6 +104,9 @@ export function getVotingStateLabel(
 	if (votingState === 'voting') {
 		return copy.stageVoting;
 	}
+	if (votingState === 'countdown') {
+		return copy.stageCountdown;
+	}
 	if (votingState === 'revealed') {
 		return copy.stageRevealed;
 	}

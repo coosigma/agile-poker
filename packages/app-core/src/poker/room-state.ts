@@ -10,6 +10,7 @@ import { transitionRoomState } from './room-machine.js';
 import { transitionVotingState } from './voting-machine.js';
 
 export const MAX_COMPLETED_ROUNDS = 20;
+export const REVEAL_COUNTDOWN_MS = 3000;
 
 export function normalizeRoomId(roomId: string): string {
 	return roomId.trim().toUpperCase();
@@ -24,6 +25,7 @@ export function createRoomState(roomId: string): RoomState {
 		roomId,
 		roomState: 'empty',
 		votingState: 'noTopic',
+		revealCountdownEndsAt: null,
 		hostId: null,
 		ticketTitle: '',
 		participants: [],
@@ -148,7 +150,12 @@ export function setTicket(
 	const nextVotingState = transitionVotingState(state.votingState, {
 		type: nextTitle ? 'SET_TOPIC' : 'CLEAR_TOPIC',
 	});
-	return { ...state, ticketTitle: nextTitle, votingState: nextVotingState };
+	return {
+		...state,
+		ticketTitle: nextTitle,
+		votingState: nextVotingState,
+		revealCountdownEndsAt: null,
+	};
 }
 
 /** Casting a vote is only valid while the current topic is open for voting. */
@@ -196,11 +203,12 @@ export function startRound(state: RoomState, id: string): RoomState {
 	return {
 		...state,
 		votingState: nextVotingState,
+		revealCountdownEndsAt: null,
 		participants: state.participants.map((p) => ({ ...p, vote: null })),
 	};
 }
 
-/** Host-only: reveal the votes. */
+/** Host-only: start the reveal countdown. */
 export function revealVotes(state: RoomState, id: string): RoomState {
 	if (id !== state.hostId) {
 		return state;
@@ -210,7 +218,25 @@ export function revealVotes(state: RoomState, id: string): RoomState {
 	});
 	return nextVotingState === state.votingState
 		? state
-		: { ...state, votingState: nextVotingState };
+		: {
+				...state,
+				votingState: nextVotingState,
+				revealCountdownEndsAt: Date.now() + REVEAL_COUNTDOWN_MS,
+			};
+}
+
+/** Complete an active reveal countdown and expose all votes. */
+export function completeRevealCountdown(state: RoomState): RoomState {
+	const nextVotingState = transitionVotingState(state.votingState, {
+		type: 'COUNTDOWN_DONE',
+	});
+	return nextVotingState === state.votingState
+		? state
+		: {
+				...state,
+				votingState: nextVotingState,
+				revealCountdownEndsAt: null,
+			};
 }
 
 function completeCurrentRound(state: RoomState): CompletedRound | null {
@@ -249,6 +275,7 @@ export function doneTicket(state: RoomState, id: string): RoomState {
 	return {
 		...state,
 		votingState: nextVotingState,
+		revealCountdownEndsAt: null,
 		ticketTitle: '',
 		participants: state.participants.map((p) => ({ ...p, vote: null })),
 		completedRounds: completedRound
@@ -323,6 +350,7 @@ export function toRoomStateView(state: RoomState): RoomStateView {
 		roomId: state.roomId,
 		roomState: state.roomState,
 		votingState: state.votingState,
+		revealCountdownEndsAt: state.revealCountdownEndsAt,
 		ticketTitle: state.ticketTitle,
 		participants,
 		completedRounds: state.completedRounds,

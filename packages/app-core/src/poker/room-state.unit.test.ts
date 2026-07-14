@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest';
 import {
 	castVote,
 	clearVote,
+	completeRevealCountdown,
 	createRoomState,
 	doneTicket,
 	joinRoom,
@@ -94,6 +95,7 @@ describe('host-guarded transitions', () => {
 		state = castVote(state, 'host', ESTIMATE);
 		state = castVote(state, 'guest', ESTIMATE);
 		state = revealVotes(state, 'host');
+		state = completeRevealCountdown(state);
 		return state;
 	}
 
@@ -116,9 +118,17 @@ describe('host-guarded transitions', () => {
 		expect(after).toBe(before);
 	});
 
-	test('the host reveals votes, changing the voting state', () => {
+	test('the host starts a reveal countdown before votes are revealed', () => {
 		const state = revealVotes(votingRoom(), 'host');
+		expect(state.votingState).toBe('countdown');
+		expect(state.revealCountdownEndsAt).toEqual(expect.any(Number));
+	});
+
+	test('completing a reveal countdown changes the voting state', () => {
+		let state = revealVotes(votingRoom(), 'host');
+		state = completeRevealCountdown(state);
 		expect(state.votingState).toBe('revealed');
+		expect(state.revealCountdownEndsAt).toBeNull();
 	});
 
 	test('start_round clears every vote and enters voting', () => {
@@ -197,6 +207,7 @@ describe('host-guarded transitions', () => {
 			state = startRound(state, 'host');
 			state = castVote(state, 'host', ESTIMATE);
 			state = revealVotes(state, 'host');
+			state = completeRevealCountdown(state);
 			state = doneTicket(state, 'host');
 		}
 
@@ -267,6 +278,7 @@ describe('toRoomStateView', () => {
 			roomId: 'ROOM1',
 			roomState: 'active',
 			votingState: 'noTopic',
+			revealCountdownEndsAt: null,
 			ticketTitle: '',
 			participants: [
 				{
@@ -333,6 +345,7 @@ describe('toRoomStateView', () => {
 			modifier: 'base',
 		});
 		state = revealVotes(state, 'host');
+		state = completeRevealCountdown(state);
 
 		const hostView = redactRoomStateViewForParticipant(
 			toRoomStateView(state),

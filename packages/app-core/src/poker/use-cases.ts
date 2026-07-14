@@ -2,6 +2,7 @@ import { Effect } from 'effect';
 import { RoomStore } from './room-store.js';
 import {
 	applyClientMessage,
+	completeRevealCountdown,
 	leaveRoom,
 	toRoomStateView,
 } from './room-state.js';
@@ -27,6 +28,17 @@ export const applyMessage = (
 		);
 		return toRoomStateView(next);
 	});
+
+/** Complete an active reveal countdown and return the updated view. */
+export const finishRevealCountdown: Effect.Effect<
+	RoomStateView,
+	never,
+	RoomStore
+> = Effect.gen(function* () {
+	const store = yield* RoomStore;
+	const next = yield* store.update((state) => completeRevealCountdown(state));
+	return toRoomStateView(next);
+});
 
 /** Remove a participant (on disconnect) and return the updated view. */
 export const leave = (

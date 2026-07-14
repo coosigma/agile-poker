@@ -18,7 +18,12 @@ describe('votingMachine', () => {
 		{ state: 'ready', event: { type: 'CLEAR_TOPIC' }, expected: 'noTopic' },
 		{ state: 'voting', event: { type: 'VOTE' }, expected: 'voting' },
 		{ state: 'voting', event: { type: 'RESET' }, expected: 'voting' },
-		{ state: 'voting', event: { type: 'REVEAL' }, expected: 'revealed' },
+		{ state: 'voting', event: { type: 'REVEAL' }, expected: 'countdown' },
+		{
+			state: 'countdown',
+			event: { type: 'COUNTDOWN_DONE' },
+			expected: 'revealed',
+		},
 		{
 			state: 'voting',
 			event: { type: 'CLEAR_TOPIC' },
