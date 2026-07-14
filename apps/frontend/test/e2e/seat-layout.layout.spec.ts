@@ -56,12 +56,15 @@ for (const seats of CROWD_SIZES) {
 	test(`seats do not overlap and stay evenly spread with ${seats} guests`, async ({
 		page,
 	}, testInfo) => {
-		// crowd(N) seeds a host + N guests; the previewed "You" client also joins.
+		// crowd(N) seeds a player host + N guests; the previewed "You" client also joins.
+		// Player hosts are seated at the reserved 12 o'clock table position.
 		const expectedSeats = seats + 2;
 
 		await page.goto(`/playground.html?seats=${seats}`);
 
-		const seatCards = page.locator('.seat-card');
+		const seatCards = page.locator(
+			'.seat-card:not(.host-card):not(.observer-card)',
+		);
 		await expect(seatCards).toHaveCount(expectedSeats);
 		// Let positions settle before measuring (two animation frames instead of a
 		// fixed sleep, which is deterministic across machines).

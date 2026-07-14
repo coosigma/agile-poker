@@ -20,6 +20,7 @@ import { InvalidMessage } from './errors.js';
 const NumericCardValue = Schema.Literal(...NUMERIC_CARD_VALUES);
 const SpecialCardValue = Schema.Literal(...SPECIAL_CARD_VALUES);
 const VoteModifier = Schema.Literal(...MODIFIER_OPTIONS);
+const ParticipantRole = Schema.Literal('player', 'observer');
 
 const VoteChoice = Schema.Union(
 	Schema.Struct({
@@ -39,10 +40,20 @@ export const ClientMessageSchema = Schema.Union(
 		roomId: Schema.String,
 		name: Schema.optional(Schema.String),
 		claimHost: Schema.optional(Schema.Boolean),
+		role: Schema.optional(ParticipantRole),
 	}),
 	Schema.Struct({
 		type: Schema.Literal('set_name'),
 		name: Schema.optional(Schema.String),
+	}),
+	Schema.Struct({
+		type: Schema.Literal('set_role'),
+		participantId: Schema.optional(Schema.String),
+		role: ParticipantRole,
+	}),
+	Schema.Struct({
+		type: Schema.Literal('transfer_host'),
+		participantId: Schema.String,
 	}),
 	Schema.Struct({
 		type: Schema.Literal('set_ticket'),

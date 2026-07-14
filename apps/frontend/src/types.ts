@@ -15,6 +15,7 @@ export type {
 	SpecialCardValue,
 	VoteModifier,
 	VoteChoice,
+	ParticipantRole,
 	ClientMessage,
 	ServerMessage,
 	ParticipantView as Participant,

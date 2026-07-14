@@ -88,6 +88,15 @@ export function Playground() {
 		setSimPlayers(server.simulatedPlayers());
 	}
 
+	function addObserver(): void {
+		const server = serverRef.current;
+		if (!server) {
+			return;
+		}
+		server.addSimulatedObserver();
+		setSimPlayers(server.simulatedPlayers());
+	}
+
 	function addPlayers(count: number): void {
 		const server = serverRef.current;
 		if (!server) {
@@ -181,6 +190,14 @@ export function Playground() {
 						<button
 							type="button"
 							className="playground-sim-button"
+							onClick={addObserver}
+							data-testid="sim-add-observer"
+						>
+							Add observer
+						</button>
+						<button
+							type="button"
+							className="playground-sim-button"
 							onClick={() => addPlayers(5)}
 							data-testid="sim-add-5"
 						>
@@ -198,7 +215,7 @@ export function Playground() {
 					</div>
 					<p className="playground-simulate-count" data-testid="sim-count">
 						{simPlayers.length} simulated
-						{simPlayers.length === 1 ? ' player' : ' players'}
+						{simPlayers.length === 1 ? ' participant' : ' participants'}
 					</p>
 					{simPlayers.length > 0 && (
 						<ul className="playground-sim-list">
@@ -208,56 +225,60 @@ export function Playground() {
 										<div className="playground-sim-row">
 											<span className="playground-sim-name">{player.name}</span>
 											<span
-												className="playground-sim-vote"
+												className={`playground-sim-vote ${player.role === 'observer' ? 'is-observer' : ''}`}
 												data-testid={`sim-vote-${player.id}`}
 											>
-												{voteLabel(player.vote, language)}
+												{player.role === 'observer'
+													? 'Observer'
+													: voteLabel(player.vote, language)}
 											</span>
 										</div>
-										<div
-											className="playground-sim-vote-actions"
-											role="group"
-											aria-label={`Vote as ${player.name}`}
-										>
-											{NUMERIC_CARD_VALUES.map((base) => (
-												<button
-													key={base}
-													type="button"
-													className="playground-sim-vote-button"
-													onClick={() =>
-														voteAsPlayer(player.id, {
-															kind: 'estimate',
-															base,
-															modifier: 'base',
-														})
-													}
-												>
-													{base}
-												</button>
-											))}
-											{SPECIAL_CARD_VALUES.map((value) => (
-												<button
-													key={value}
-													type="button"
-													className="playground-sim-vote-button"
-													onClick={() =>
-														voteAsPlayer(player.id, {
-															kind: 'special',
-															value,
-														})
-													}
-												>
-													{value}
-												</button>
-											))}
-											<button
-												type="button"
-												className="playground-sim-vote-button is-clear"
-												onClick={() => clearPlayerVote(player.id)}
+										{player.role === 'player' ? (
+											<div
+												className="playground-sim-vote-actions"
+												role="group"
+												aria-label={`Vote as ${player.name}`}
 											>
-												Clear
-											</button>
-										</div>
+												{NUMERIC_CARD_VALUES.map((base) => (
+													<button
+														key={base}
+														type="button"
+														className="playground-sim-vote-button"
+														onClick={() =>
+															voteAsPlayer(player.id, {
+																kind: 'estimate',
+																base,
+																modifier: 'base',
+															})
+														}
+													>
+														{base}
+													</button>
+												))}
+												{SPECIAL_CARD_VALUES.map((value) => (
+													<button
+														key={value}
+														type="button"
+														className="playground-sim-vote-button"
+														onClick={() =>
+															voteAsPlayer(player.id, {
+																kind: 'special',
+																value,
+															})
+														}
+													>
+														{value}
+													</button>
+												))}
+												<button
+													type="button"
+													className="playground-sim-vote-button is-clear"
+													onClick={() => clearPlayerVote(player.id)}
+												>
+													Clear
+												</button>
+											</div>
+										) : null}
 									</div>
 									<button
 										type="button"

@@ -36,6 +36,16 @@ describe('decodeClientFrame', () => {
 		expect(Either.isRight(result)).toBe(true);
 	});
 
+	it('accepts a valid transfer_host payload', () => {
+		const result = decode(
+			JSON.stringify({
+				type: 'transfer_host',
+				participantId: 'guest',
+			}),
+		);
+		expect(Either.isRight(result)).toBe(true);
+	});
+
 	it('accepts messages without optional fields', () => {
 		expect(Either.isRight(decode(JSON.stringify({ type: 'clear_vote' })))).toBe(
 			true,

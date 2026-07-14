@@ -45,7 +45,7 @@ test.describe('edge: frontend ↔ backend', () => {
 
 			await expect(page.getByText('Room info')).toBeVisible();
 			await expect(page.getByText('Ada')).toBeVisible();
-			await expect(page.getByText('Host', { exact: true })).toBeVisible();
+			await expect(page.getByText('Host · Observer')).toBeVisible();
 		});
 	});
 });

@@ -2,6 +2,7 @@ import type {
 	ClientMessage,
 	CompletedRound,
 	Participant,
+	ParticipantRole,
 	RoomState,
 	VoteChoice,
 } from './types.js';
@@ -93,12 +94,14 @@ export interface JoinRoomInput {
 	readonly id: string;
 	readonly name?: string;
 	readonly claimHost?: boolean;
+	readonly role?: ParticipantRole;
 }
 
 /** Add a participant to the room and (re)assign the host. */
 export function joinRoom(state: RoomState, input: JoinRoomInput): RoomState {
 	const name = makeUniqueParticipantName(state, input.name || 'Anonymous');
-	const participant: Participant = { id: input.id, name, vote: null };
+	const role = input.role ?? (input.claimHost ? 'observer' : 'player');
+	const participant: Participant = { id: input.id, name, role, vote: null };
 
 	let next: RoomState = {
 		...state,
@@ -111,6 +114,40 @@ export function joinRoom(state: RoomState, input: JoinRoomInput): RoomState {
 	}
 
 	return chooseHost(next);
+}
+
+export function setRole(
+	state: RoomState,
+	id: string,
+	role: ParticipantRole,
+	participantId?: string,
+): RoomState {
+	const targetId = id === state.hostId ? (participantId ?? id) : id;
+	if (!state.participants.some((participant) => participant.id === targetId)) {
+		return state;
+	}
+	return replaceParticipant(state, targetId, (participant) => ({
+		...participant,
+		role,
+		vote: role === 'observer' ? null : participant.vote,
+	}));
+}
+
+export function transferHost(
+	state: RoomState,
+	id: string,
+	participantId: string,
+): RoomState {
+	if (id !== state.hostId) {
+		return state;
+	}
+	if (
+		participantId === state.hostId ||
+		!state.participants.some((participant) => participant.id === participantId)
+	) {
+		return state;
+	}
+	return { ...state, hostId: participantId };
 }
 
 export function setName(
@@ -158,7 +195,7 @@ export function setTicket(
 	};
 }
 
-/** Casting a vote is only valid while the current topic is open for voting. */
+/** Casting a vote is valid while voting is open or the reveal countdown runs. */
 export function castVote(
 	state: RoomState,
 	id: string,
@@ -167,10 +204,17 @@ export function castVote(
 	if (!state.participants.some((p) => p.id === id)) {
 		return state;
 	}
+	if (state.participants.find((p) => p.id === id)?.role !== 'player') {
+		return state;
+	}
 	const nextVotingState = transitionVotingState(state.votingState, {
 		type: 'VOTE',
 	});
-	if (nextVotingState === state.votingState && state.votingState !== 'voting') {
+	if (
+		nextVotingState === state.votingState &&
+		state.votingState !== 'voting' &&
+		state.votingState !== 'countdown'
+	) {
 		return state;
 	}
 	const withVote = replaceParticipant(state, id, (p) => ({
@@ -244,7 +288,7 @@ function completeCurrentRound(state: RoomState): CompletedRound | null {
 		return null;
 	}
 	const votes = state.participants.flatMap((participant) =>
-		participant.vote === null
+		participant.role !== 'player' || participant.vote === null
 			? []
 			: [
 					{
@@ -315,9 +359,14 @@ export function applyClientMessage(
 				id: participantId,
 				name: message.name,
 				claimHost: message.claimHost,
+				role: message.role,
 			});
 		case 'set_name':
 			return setName(state, participantId, message.name);
+		case 'set_role':
+			return setRole(state, participantId, message.role, message.participantId);
+		case 'transfer_host':
+			return transferHost(state, participantId, message.participantId);
 		case 'set_ticket':
 			return setTicket(state, participantId, message.ticketTitle);
 		case 'vote':
@@ -339,6 +388,7 @@ export function toRoomStateView(state: RoomState): RoomStateView {
 		(participant) => ({
 			id: participant.id,
 			name: participant.name,
+			role: participant.role,
 			vote: participant.vote,
 			hasVoted: participant.vote !== null,
 			connected: true,

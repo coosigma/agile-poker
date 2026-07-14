@@ -7,6 +7,7 @@
  * real reducer's rules (host-only actions come from the seeded host).
  */
 import type { ClientMessage } from '@agile-poker/app-core/poker';
+import type { ParticipantRole } from '@agile-poker/app-core/poker';
 import { MockRoomServer } from '../mocks/room-server';
 
 export const PLAYGROUND_ROOM_ID = 'DEMO01';
@@ -33,9 +34,16 @@ const join = (
 	participantId: string,
 	name: string,
 	claimHost = false,
+	role?: ParticipantRole,
 ): SeedStep => ({
 	participantId,
-	message: { type: 'join_room', roomId: PLAYGROUND_ROOM_ID, name, claimHost },
+	message: {
+		type: 'join_room',
+		roomId: PLAYGROUND_ROOM_ID,
+		name,
+		claimHost,
+		role,
+	},
 });
 
 const estimate = (
@@ -80,7 +88,7 @@ export const roomScenarios: readonly RoomScenario[] = [
 			'A round is underway on a ticket. Alice has voted, Bob has not, and you join mid-vote.',
 		selfIsHost: false,
 		seed: [
-			join(ALICE, 'Alice', true),
+			join(ALICE, 'Alice', true, 'player'),
 			join(BOB, 'Bob'),
 			hostAction(ALICE, 'set_ticket', 'Checkout flow refactor'),
 			hostAction(ALICE, 'start_round'),
@@ -94,7 +102,7 @@ export const roomScenarios: readonly RoomScenario[] = [
 			'The host revealed an estimate round. You join a room that already shows everyone’s cards.',
 		selfIsHost: false,
 		seed: [
-			join(ALICE, 'Alice', true),
+			join(ALICE, 'Alice', true, 'player'),
 			join(BOB, 'Bob'),
 			hostAction(ALICE, 'set_ticket', 'Checkout flow refactor'),
 			hostAction(ALICE, 'start_round'),
@@ -121,7 +129,7 @@ export function buildScenarioServer(scenario: RoomScenario): MockRoomServer {
  */
 export function crowdScenario(count: number): RoomScenario {
 	const size = Math.max(0, Math.floor(count));
-	const seed: SeedStep[] = [join(ALICE, 'Alice', true)];
+	const seed: SeedStep[] = [join(ALICE, 'Alice', true, 'player')];
 	seed.push(hostAction(ALICE, 'set_ticket', 'Capacity planning'));
 	seed.push(hostAction(ALICE, 'start_round'));
 	seed.push(estimate(ALICE, '5'));

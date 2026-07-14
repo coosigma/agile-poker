@@ -43,7 +43,12 @@ describe('RoomStore.update atomicity', () => {
 						Effect.yieldNow().pipe(
 							Effect.flatMap(() =>
 								store.update(
-									appendParticipant({ id: `p${i}`, name: `P${i}`, vote: null }),
+									appendParticipant({
+										id: `p${i}`,
+										name: `P${i}`,
+										role: 'player',
+										vote: null,
+									}),
 								),
 							),
 						),
@@ -74,6 +79,7 @@ describe('RoomStore.update atomicity', () => {
 			participants: Array.from({ length: size }, (_v, i) => ({
 				id: `p${i}`,
 				name: `P${i}`,
+				role: 'player',
 				vote: null,
 			})),
 		};
@@ -109,6 +115,7 @@ describe('RoomStore.update atomicity', () => {
 				roomId: 'RT',
 				name: 'P0',
 				claimHost: true,
+				role: 'player',
 			}),
 		);
 		await Promise.all(
@@ -186,7 +193,7 @@ describe('per-room runtime isolation', () => {
 			Effect.gen(function* () {
 				const store = yield* RoomStore;
 				yield* store.update(
-					appendParticipant({ id: 'x', name: 'X', vote: null }),
+					appendParticipant({ id: 'x', name: 'X', role: 'player', vote: null }),
 				);
 				return yield* store.get;
 			}).pipe(Effect.provide(layer)),

@@ -1,4 +1,9 @@
-import { NUMERIC_CARD_VALUES, type RoomState, type VoteChoice } from '../types';
+import {
+	NUMERIC_CARD_VALUES,
+	type ParticipantRole,
+	type RoomState,
+	type VoteChoice,
+} from '../types';
 import { STRINGS, type Language } from './i18n';
 
 const DEFAULT_NAME = '';
@@ -36,7 +41,7 @@ export function updateRoomInUrl(roomId: string): void {
 
 export function getRoomIntent(
 	roomId: string,
-): { roomId: string; type: RoomIntentType } | null {
+): { roomId: string; type: RoomIntentType; role?: ParticipantRole } | null {
 	if (!roomId) {
 		return null;
 	}
@@ -45,17 +50,25 @@ export function getRoomIntent(
 		return null;
 	}
 	try {
-		const value = JSON.parse(raw) as { roomId: string; type: RoomIntentType };
+		const value = JSON.parse(raw) as {
+			roomId: string;
+			type: RoomIntentType;
+			role?: ParticipantRole;
+		};
 		return value.roomId === roomId ? value : null;
 	} catch {
 		return null;
 	}
 }
 
-export function setRoomIntent(roomId: string, type: RoomIntentType): void {
+export function setRoomIntent(
+	roomId: string,
+	type: RoomIntentType,
+	role?: ParticipantRole,
+): void {
 	window.sessionStorage.setItem(
 		ROOM_INTENT_KEY,
-		JSON.stringify({ roomId, type }),
+		JSON.stringify({ roomId, type, role }),
 	);
 }
 

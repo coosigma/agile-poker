@@ -24,6 +24,7 @@ describe('votingMachine', () => {
 			event: { type: 'COUNTDOWN_DONE' },
 			expected: 'revealed',
 		},
+		{ state: 'countdown', event: { type: 'VOTE' }, expected: 'countdown' },
 		{
 			state: 'voting',
 			event: { type: 'CLEAR_TOPIC' },

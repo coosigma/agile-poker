@@ -14,9 +14,11 @@ import {
 	redactRoomStateViewForParticipant,
 	revealVotes,
 	setName,
+	setRole,
 	setTicket,
 	startRound,
 	toRoomStateView,
+	transferHost,
 } from './room-state.js';
 import type { RoomState, VoteChoice } from './types.js';
 
@@ -74,6 +76,17 @@ describe('joinRoom', () => {
 		state = joinRoom(state, { id: 'p2', name: 'Alice' });
 		expect(state.participants.map((p) => p.name)).toEqual(['Alice', 'Alice 2']);
 	});
+
+	test('defaults claimed hosts to observer and regular joins to player', () => {
+		let state = room();
+		state = joinRoom(state, { id: 'host', name: 'Host', claimHost: true });
+		state = joinRoom(state, { id: 'guest', name: 'Guest' });
+
+		expect(state.participants).toMatchObject([
+			{ id: 'host', role: 'observer' },
+			{ id: 'guest', role: 'player' },
+		]);
+	});
 });
 
 describe('host-guarded transitions', () => {
@@ -129,6 +142,22 @@ describe('host-guarded transitions', () => {
 		state = completeRevealCountdown(state);
 		expect(state.votingState).toBe('revealed');
 		expect(state.revealCountdownEndsAt).toBeNull();
+	});
+
+	test('players can update votes during the reveal countdown', () => {
+		let state = revealVotes(votingRoom(), 'host');
+		const updatedVote: VoteChoice = {
+			kind: 'estimate',
+			base: '8',
+			modifier: 'sharp',
+		};
+
+		state = castVote(state, 'guest', updatedVote);
+
+		expect(state.votingState).toBe('countdown');
+		expect(state.participants.find((p) => p.id === 'guest')?.vote).toEqual(
+			updatedVote,
+		);
 	});
 
 	test('start_round clears every vote and enters voting', () => {
@@ -248,6 +277,76 @@ describe('voting transitions', () => {
 		state = clearVote(state, 'p1');
 		expect(state.participants[0].vote).toBeNull();
 	});
+
+	test('observers cannot cast votes', () => {
+		let state = joinRoom(room(), { id: 'host', name: 'Host' });
+		state = joinRoom(state, {
+			id: 'observer',
+			name: 'Observer',
+			role: 'observer',
+		});
+		state = setTicket(state, 'host', 'PAY-1842');
+		state = startRound(state, 'host');
+
+		const after = castVote(state, 'observer', ESTIMATE);
+
+		expect(after).toBe(state);
+		expect(
+			after.participants.find((p) => p.id === 'observer')?.vote,
+		).toBeNull();
+	});
+
+	test('switching a voted player to observer clears their vote', () => {
+		let state = joinRoom(room(), { id: 'host', name: 'Host' });
+		state = joinRoom(state, { id: 'guest', name: 'Guest' });
+		state = setTicket(state, 'host', 'PAY-1842');
+		state = startRound(state, 'host');
+		state = castVote(state, 'guest', ESTIMATE);
+
+		state = setRole(state, 'guest', 'observer');
+
+		expect(state.participants.find((p) => p.id === 'guest')).toMatchObject({
+			role: 'observer',
+			vote: null,
+		});
+	});
+
+	test('host can change another participant role but non-hosts only change themselves', () => {
+		let state = joinRoom(room(), { id: 'host', name: 'Host' });
+		state = joinRoom(state, { id: 'guest', name: 'Guest' });
+
+		state = setRole(state, 'host', 'observer', 'guest');
+		expect(state.participants.find((p) => p.id === 'guest')?.role).toBe(
+			'observer',
+		);
+
+		state = setRole(state, 'guest', 'player', 'host');
+		expect(state.participants.find((p) => p.id === 'host')?.role).toBe(
+			'player',
+		);
+		expect(state.participants.find((p) => p.id === 'guest')?.role).toBe(
+			'player',
+		);
+	});
+
+	test('host can transfer host status to another participant', () => {
+		let state = joinRoom(room(), { id: 'host', name: 'Host' });
+		state = joinRoom(state, { id: 'guest', name: 'Guest' });
+
+		state = transferHost(state, 'host', 'guest');
+
+		expect(state.hostId).toBe('guest');
+	});
+
+	test('non-hosts cannot transfer host status', () => {
+		let state = joinRoom(room(), { id: 'host', name: 'Host' });
+		state = joinRoom(state, { id: 'guest', name: 'Guest' });
+
+		const after = transferHost(state, 'guest', 'guest');
+
+		expect(after).toBe(state);
+		expect(after.hostId).toBe('host');
+	});
 });
 
 describe('setName', () => {
@@ -267,6 +366,20 @@ describe('leaveRoom', () => {
 		expect(state.hostId).toBe('guest');
 		expect(state.participants).toHaveLength(1);
 	});
+
+	test('reassigns the host to the second entrant when the host leaves a larger room', () => {
+		let state = joinRoom(room(), { id: 'host', name: 'Host' });
+		state = joinRoom(state, { id: 'second', name: 'Second' });
+		state = joinRoom(state, { id: 'third', name: 'Third' });
+
+		state = leaveRoom(state, 'host');
+
+		expect(state.hostId).toBe('second');
+		expect(state.participants.map((participant) => participant.id)).toEqual([
+			'second',
+			'third',
+		]);
+	});
 });
 
 describe('toRoomStateView', () => {
@@ -284,6 +397,7 @@ describe('toRoomStateView', () => {
 				{
 					id: 'host',
 					name: 'Host',
+					role: 'player',
 					vote: null,
 					hasVoted: false,
 					connected: true,
@@ -292,6 +406,7 @@ describe('toRoomStateView', () => {
 				{
 					id: 'guest',
 					name: 'Guest',
+					role: 'player',
 					vote: null,
 					hasVoted: false,
 					connected: true,

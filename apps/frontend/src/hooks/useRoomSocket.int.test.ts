@@ -29,6 +29,7 @@ function makeRoomState(overrides: Partial<RoomState> = {}): RoomState {
 			{
 				id: 's1',
 				name: 'Ada',
+				role: 'player',
 				vote: null,
 				hasVoted: false,
 				connected: true,
@@ -66,7 +67,13 @@ describe('useRoomSocket', () => {
 
 		expect(result.current.socketStatus).toBe('open');
 		expect(MockWebSocket.latest().sentPayloads()).toEqual([
-			{ type: 'join_room', roomId: 'ABC', name: 'Ada', claimHost: false },
+			{
+				type: 'join_room',
+				roomId: 'ABC',
+				name: 'Ada',
+				claimHost: false,
+				role: 'player',
+			},
 		]);
 	});
 
@@ -80,6 +87,20 @@ describe('useRoomSocket', () => {
 		expect(MockWebSocket.latest().sentPayloads()[0]).toMatchObject({
 			type: 'join_room',
 			claimHost: true,
+			role: 'observer',
+		});
+	});
+
+	test('uses the stored join role when joining a room', () => {
+		setRoomIntent('ABC', 'join', 'observer');
+		renderHook(() => useRoomSocket(baseOptions));
+
+		act(() => MockWebSocket.latest().emitOpen());
+
+		expect(MockWebSocket.latest().sentPayloads()[0]).toMatchObject({
+			type: 'join_room',
+			claimHost: false,
+			role: 'observer',
 		});
 	});
 

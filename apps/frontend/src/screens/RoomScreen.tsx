@@ -1,26 +1,32 @@
 import {
 	type CSSProperties,
 	type FormEvent,
+	type MouseEvent,
 	useEffect,
 	useRef,
 	useState,
 } from 'react';
 import { InfoTip } from '../components/InfoTip';
 import { LanguageSelector } from '../components/LanguageSelector';
+import { RoomPanel } from '../components/RoomPanel';
 import { useRoomSocket } from '../hooks/useRoomSocket';
-import { formatText, STRINGS, type Language } from '../lib/i18n';
+import { STRINGS, type Language } from '../lib/i18n';
 import { computeScoreboardStats } from '../lib/scoreboard';
 import {
 	getVotingStateLabel,
 	layoutSeats,
 	roomShareUrl,
+	voteNumericValue,
 	voteLabel,
 } from '../lib/poker';
 import {
 	MODIFIER_OPTIONS,
 	NUMERIC_CARD_VALUES,
 	SPECIAL_CARD_VALUES,
+	type NumericCardValue,
+	type SpecialCardValue,
 	type VoteModifier,
+	type VoteChoice,
 } from '../types';
 
 interface RoomScreenProps {
@@ -42,10 +48,17 @@ export function RoomScreen({
 
 	const [ticketDraft, setTicketDraft] = useState('');
 	const [modifier, setModifier] = useState<VoteModifier>('base');
+	const [selectedNumericVote, setSelectedNumericVote] =
+		useState<NumericCardValue | null>(null);
+	const [selectedSpecialVote, setSelectedSpecialVote] =
+		useState<SpecialCardValue | null>(null);
 	const [pendingControl, setPendingControl] = useState<
-		'reset' | 'reveal' | 'done' | null
+		'reset' | 'reveal' | null
 	>(null);
+	const [showTicketLockedNotice, setShowTicketLockedNotice] = useState(false);
 	const [now, setNow] = useState(() => Date.now());
+	const [ticketHistoryIndex, setTicketHistoryIndex] = useState(0);
+	const submittedVoteKeyRef = useRef<string | null>(null);
 
 	// Seats are distributed by pixel arc length, which needs the table frame's
 	// aspect ratio (width / height). Measure it and keep it current on resize.
@@ -67,6 +80,26 @@ export function RoomScreen({
 	}, []);
 
 	useEffect(() => {
+		const closeSeatRoleMenus = (event: PointerEvent) => {
+			const target = event.target;
+			if (
+				target instanceof Element &&
+				target.closest('.seat-role-menu') !== null
+			) {
+				return;
+			}
+			document
+				.querySelectorAll<HTMLDetailsElement>('.seat-role-menu[open]')
+				.forEach((menu) => menu.removeAttribute('open'));
+		};
+
+		document.addEventListener('pointerdown', closeSeatRoleMenus);
+		return () => {
+			document.removeEventListener('pointerdown', closeSeatRoleMenus);
+		};
+	}, []);
+
+	useEffect(() => {
 		if (state) {
 			setTicketDraft(state.ticketTitle);
 		}
@@ -77,11 +110,25 @@ export function RoomScreen({
 		null;
 	const isHost = Boolean(self?.isHost);
 	const participants = state?.participants ?? [];
+	const hostParticipant =
+		participants.find((participant) => participant.isHost) ?? null;
+	const playerParticipants = participants.filter(
+		(participant) => participant.role === 'player',
+	);
+	const observerParticipants = participants.filter(
+		(participant) => participant.role === 'observer',
+	);
+	const seatedParticipants = playerParticipants.filter(
+		(participant) => !participant.isHost,
+	);
+	const visibleObserverParticipants = observerParticipants.filter(
+		(participant) => !participant.isHost,
+	);
 	const completedRounds = state?.completedRounds ?? [];
-	const connectedCount = participants.filter(
+	const connectedCount = playerParticipants.filter(
 		(participant) => participant.connected,
 	).length;
-	const votedCount = participants.filter(
+	const votedCount = playerParticipants.filter(
 		(participant) => participant.hasVoted,
 	).length;
 	const savedTicketTitle = state?.ticketTitle ?? '';
@@ -92,6 +139,8 @@ export function RoomScreen({
 		state?.votingState === 'noTopic' ||
 		state?.votingState === 'ready' ||
 		state?.votingState === 'completed';
+	const isTicketLockedUntilDone =
+		state?.votingState === 'countdown' || state?.votingState === 'revealed';
 	const canUpdateTicket = canEditTicket && hasUnsavedTicketChange;
 	const canStartRound =
 		Boolean(state) &&
@@ -116,7 +165,17 @@ export function RoomScreen({
 		? Math.min(3, Math.max(1, Math.ceil((countdownEndsAt - now) / 1000)))
 		: null;
 
-	const stats = computeScoreboardStats(participants, state?.votingState);
+	const stats = computeScoreboardStats(playerParticipants, state?.votingState);
+	const isPlayer = self?.role === 'player';
+	const canSelectVoteCards =
+		state?.votingState === 'voting' || state?.votingState === 'countdown';
+	const canSubmitVote = isPlayer && canSelectVoteCards;
+	const selectedVote: VoteChoice | null = selectedSpecialVote
+		? { kind: 'special', value: selectedSpecialVote }
+		: selectedNumericVote !== null
+			? { kind: 'estimate', base: selectedNumericVote, modifier }
+			: null;
+	const selectedVoteKey = selectedVote ? voteKey(selectedVote) : null;
 
 	useEffect(() => {
 		if (!isRevealCountdown) {
@@ -137,16 +196,49 @@ export function RoomScreen({
 	useEffect(() => {
 		if (
 			(pendingControl === 'reset' && !canResetRound) ||
-			(pendingControl === 'reveal' && !canRevealVotes) ||
-			(pendingControl === 'done' && !canDoneTicket)
+			(pendingControl === 'reveal' && !canRevealVotes)
 		) {
 			setPendingControl(null);
 		}
-	}, [canDoneTicket, canResetRound, canRevealVotes, pendingControl]);
+	}, [canResetRound, canRevealVotes, pendingControl]);
+
+	useEffect(() => {
+		if (!isTicketLockedUntilDone) {
+			setShowTicketLockedNotice(false);
+		}
+	}, [isTicketLockedUntilDone]);
+
+	useEffect(() => {
+		if (!canSelectVoteCards) {
+			setSelectedNumericVote(null);
+			setSelectedSpecialVote(null);
+		}
+	}, [canSelectVoteCards]);
+
+	useEffect(() => {
+		if (!canSubmitVote) {
+			submittedVoteKeyRef.current = null;
+			return;
+		}
+		if (!selectedVote || !selectedVoteKey) {
+			return;
+		}
+		if (submittedVoteKeyRef.current === selectedVoteKey) {
+			return;
+		}
+		submittedVoteKeyRef.current = selectedVoteKey;
+		sendMessage({
+			type: 'vote',
+			vote: selectedVote,
+		});
+	}, [canSubmitVote, selectedVote, selectedVoteKey, sendMessage]);
 
 	const handleTicketSubmit = (event: FormEvent) => {
 		event.preventDefault();
 		if (!canUpdateTicket) {
+			if (isTicketLockedUntilDone) {
+				setShowTicketLockedNotice(true);
+			}
 			return;
 		}
 		sendMessage({ type: 'set_ticket', ticketTitle: ticketDraftValue });
@@ -180,7 +272,7 @@ export function RoomScreen({
 		if (!canDoneTicket) {
 			return;
 		}
-		setPendingControl('done');
+		sendMessage({ type: 'done_ticket' });
 	};
 
 	const handleConfirmControl = () => {
@@ -190,24 +282,199 @@ export function RoomScreen({
 		if (pendingControl === 'reveal' && canRevealVotes) {
 			sendMessage({ type: 'reveal_votes' });
 		}
-		if (pendingControl === 'done' && canDoneTicket) {
-			sendMessage({ type: 'done_ticket' });
-		}
 		setPendingControl(null);
 	};
 
-	const seatLayouts = layoutSeats(participants.length, frameAspect);
-	const seats = participants.map((participant, index) => ({
+	const handleClearVote = () => {
+		setSelectedNumericVote(null);
+		setSelectedSpecialVote(null);
+		submittedVoteKeyRef.current = null;
+		sendMessage({ type: 'clear_vote' });
+	};
+
+	const hostIsPlayer = hostParticipant?.role === 'player';
+	const tableSeatLayouts = layoutSeats(
+		seatedParticipants.length + (hostIsPlayer ? 1 : 0),
+		frameAspect,
+	);
+	const hostSeat = hostIsPlayer ? tableSeatLayouts[0] : null;
+	const seatLayouts = hostIsPlayer
+		? tableSeatLayouts.slice(1)
+		: tableSeatLayouts;
+	const seats = seatedParticipants.map((participant, index) => ({
 		participant,
 		...seatLayouts[index],
 	}));
 
 	const confirmPrompt =
-		pendingControl === 'reset'
-			? copy.resetRoundConfirm
-			: pendingControl === 'done'
-				? copy.doneTicketConfirm
-				: null;
+		pendingControl === 'reset' ? copy.resetRoundConfirm : null;
+	const ticketHistory = [...completedRounds].reverse();
+	const currentHistory = ticketHistory[ticketHistoryIndex] ?? null;
+	const ticketHistoryActions = (
+		<div className="ticket-history-actions">
+			<button
+				className="ticket-history-button"
+				type="button"
+				aria-label={copy.previousTicket}
+				disabled={ticketHistoryIndex >= ticketHistory.length - 1}
+				onClick={() =>
+					setTicketHistoryIndex((index) =>
+						Math.min(Math.max(0, ticketHistory.length - 1), index + 1),
+					)
+				}
+			>
+				‹
+			</button>
+			<button
+				className="ticket-history-button"
+				type="button"
+				aria-label={copy.nextTicket}
+				disabled={ticketHistoryIndex <= 0}
+				onClick={() => setTicketHistoryIndex((index) => Math.max(0, index - 1))}
+			>
+				›
+			</button>
+		</div>
+	);
+
+	useEffect(() => {
+		if (ticketHistoryIndex >= ticketHistory.length) {
+			setTicketHistoryIndex(Math.max(0, ticketHistory.length - 1));
+		}
+	}, [ticketHistory.length, ticketHistoryIndex]);
+	const currentHistoryNumericVotes =
+		currentHistory?.votes
+			.map((completedVote) => voteNumericValue(completedVote.vote))
+			.filter((value): value is number => value !== null) ?? [];
+	const currentHistoryMean =
+		currentHistoryNumericVotes.length > 0
+			? currentHistoryNumericVotes.reduce((sum, value) => sum + value, 0) /
+				currentHistoryNumericVotes.length
+			: 0;
+	const currentHistoryStdDev =
+		currentHistoryNumericVotes.length > 0
+			? Math.sqrt(
+					currentHistoryNumericVotes.reduce(
+						(sum, value) => sum + (value - currentHistoryMean) ** 2,
+						0,
+					) / currentHistoryNumericVotes.length,
+				)
+			: 0;
+	const currentHistorySelfVote =
+		self?.role === 'player'
+			? currentHistory?.votes.find((vote) => vote.participantId === selfId)
+			: null;
+	const shouldShowCurrentHistorySelfVote =
+		self?.role === 'player' && Boolean(currentHistory);
+
+	const ticketHistorySlides = (showTitle: boolean) => (
+		<div className="ticket-history">
+			{showTitle ? (
+				<div className="ticket-history-header">
+					<strong>{copy.completedTickets}</strong>
+				</div>
+			) : null}
+			{currentHistory ? (
+				<article className="completed-round-card ticket-history-slide">
+					<div className="completed-round-title">
+						<strong>{currentHistory.ticketTitle}</strong>
+						{shouldShowCurrentHistorySelfVote ? (
+							<span className="ticket-history-self-vote">
+								<span>{copy.yourVote}:</span>
+								<strong>
+									{voteLabel(currentHistorySelfVote?.vote ?? null, language)}
+								</strong>
+							</span>
+						) : null}
+					</div>
+					<div className="ticket-history-stats">
+						<div>
+							<strong>{currentHistory.votes.length}</strong>
+							<span>{copy.statVotes}</span>
+						</div>
+						<div>
+							<strong>
+								{currentHistoryNumericVotes.length > 0
+									? currentHistoryMean.toFixed(1)
+									: '0'}
+							</strong>
+							<span>{copy.statMean}</span>
+						</div>
+						<div>
+							<strong>
+								{currentHistoryNumericVotes.length > 0
+									? currentHistoryStdDev.toFixed(1)
+									: '0'}
+							</strong>
+							<span>{copy.statStdDev}</span>
+						</div>
+					</div>
+				</article>
+			) : (
+				<p className="empty-panel-copy">{copy.noCompletedTickets}</p>
+			)}
+		</div>
+	);
+	const closeRoleMenu = (event: MouseEvent<HTMLButtonElement>) => {
+		event.currentTarget.closest('details')?.removeAttribute('open');
+	};
+	const closeOtherSeatRoleMenus = (event: MouseEvent<HTMLElement>) => {
+		const currentMenu = event.currentTarget.closest('details');
+		document
+			.querySelectorAll<HTMLDetailsElement>('.seat-role-menu[open]')
+			.forEach((menu) => {
+				if (menu !== currentMenu) {
+					menu.removeAttribute('open');
+				}
+			});
+	};
+	const roleMenu = (
+		participantId: string,
+		role: 'player' | 'observer',
+		label: string,
+	) => (
+		<details className="seat-role-menu">
+			<summary aria-label={copy.roleLabel} onClick={closeOtherSeatRoleMenus}>
+				<svg
+					className="seat-role-menu-icon"
+					viewBox="0 0 16 16"
+					aria-hidden="true"
+					focusable="false"
+				>
+					<circle cx="8" cy="3.5" r="1.4" />
+					<circle cx="8" cy="8" r="1.4" />
+					<circle cx="8" cy="12.5" r="1.4" />
+				</svg>
+			</summary>
+			<div className="seat-role-menu-popover">
+				<button
+					type="button"
+					onClick={(event) => {
+						closeRoleMenu(event);
+						sendMessage({
+							type: 'transfer_host',
+							participantId,
+						});
+					}}
+				>
+					{copy.makeHost}
+				</button>
+				<button
+					type="button"
+					onClick={(event) => {
+						closeRoleMenu(event);
+						sendMessage({
+							type: 'set_role',
+							participantId,
+							role,
+						});
+					}}
+				>
+					{label}
+				</button>
+			</div>
+		</details>
+	);
 
 	return (
 		<div className="app-shell room-shell">
@@ -248,13 +515,15 @@ export function RoomScreen({
 
 			<section className="room-layout">
 				<aside className="side-panel">
-					<div className="panel">
-						<div className="panel-header">
-							<h3>{copy.roomInfo}</h3>
+					<RoomPanel
+						title={copy.roomInfo}
+						className="room-info-panel"
+						badge={
 							<span className="badge">
 								{connectedCount} {copy.connected}
 							</span>
-						</div>
+						}
+					>
 						<div className="meta-list">
 							<div>
 								<span>{copy.currentVotingState}</span>
@@ -268,39 +537,57 @@ export function RoomScreen({
 							<div>
 								<span>{copy.voted}</span>
 								<strong>
-									{votedCount}/{participants.length}
+									{votedCount}/{playerParticipants.length}
 								</strong>
 							</div>
 							<div>
-								<span>{copy.myRole}</span>
-								<strong>{isHost ? copy.host : copy.member}</strong>
+								<strong>
+									{[
+										isHost ? copy.host : null,
+										self?.role === 'observer'
+											? copy.observerRole
+											: copy.playerRole,
+									]
+										.filter(Boolean)
+										.join(' · ')}
+								</strong>
+								{self ? (
+									<details className="self-role-menu">
+										<summary aria-label={copy.roleLabel}>
+											<span>{copy.myRole}</span>
+										</summary>
+										<div className="self-role-menu-popover">
+											<button
+												type="button"
+												className={self.role === 'player' ? 'active' : ''}
+												onClick={(event) => {
+													closeRoleMenu(event);
+													sendMessage({ type: 'set_role', role: 'player' });
+												}}
+											>
+												{copy.playerRole}
+											</button>
+											<button
+												type="button"
+												className={self.role === 'observer' ? 'active' : ''}
+												onClick={(event) => {
+													closeRoleMenu(event);
+													sendMessage({ type: 'set_role', role: 'observer' });
+												}}
+											>
+												{copy.observerRole}
+											</button>
+										</div>
+									</details>
+								) : (
+									<span>{copy.myRole}</span>
+								)}
 							</div>
 						</div>
-					</div>
+					</RoomPanel>
 
 					{isHost ? (
-						<div className="panel">
-							<div className="panel-header">
-								<h3>{copy.hostControls}</h3>
-								<div className="ticket-history-actions">
-									<button
-										className="ticket-history-button"
-										type="button"
-										aria-label={copy.previousTicket}
-										disabled
-									>
-										‹
-									</button>
-									<button
-										className="ticket-history-button"
-										type="button"
-										aria-label={copy.nextTicket}
-										disabled
-									>
-										›
-									</button>
-								</div>
-							</div>
+						<RoomPanel title={copy.hostControls} actions={ticketHistoryActions}>
 							<form
 								className="stack host-ticket-form"
 								onSubmit={handleTicketSubmit}
@@ -309,9 +596,24 @@ export function RoomScreen({
 									<label className="ticket-input-label">
 										<input
 											value={ticketDraft}
-											onChange={(event) => setTicketDraft(event.target.value)}
+											onChange={(event) => {
+												if (canEditTicket) {
+													setTicketDraft(event.target.value);
+												}
+											}}
+											onClick={() => {
+												if (isTicketLockedUntilDone) {
+													setShowTicketLockedNotice(true);
+												}
+											}}
+											onFocus={() => {
+												if (isTicketLockedUntilDone) {
+													setShowTicketLockedNotice(true);
+												}
+											}}
 											aria-label={copy.currentTicket}
 											placeholder={copy.ticketPlaceholder}
+											readOnly={!canEditTicket}
 											maxLength={40}
 										/>
 									</label>
@@ -324,6 +626,11 @@ export function RoomScreen({
 										✓
 									</button>
 								</div>
+								{showTicketLockedNotice ? (
+									<p className="ticket-lock-notice">
+										{copy.finishTicketBeforeEditing}
+									</p>
+								) : null}
 							</form>
 							<div className="control-pad" aria-label={copy.hostControls}>
 								<button
@@ -369,135 +676,161 @@ export function RoomScreen({
 									<span className="control-pad-label">{copy.doneTicket}</span>
 								</button>
 							</div>
-						</div>
+							{ticketHistorySlides(true)}
+						</RoomPanel>
 					) : null}
 
-					<div className="panel completed-rounds-panel">
-						<div className="panel-header">
-							<h3>{copy.completedTickets}</h3>
-							<span className="badge muted-badge">
-								{completedRounds.length}
-							</span>
-						</div>
-						{completedRounds.length > 0 ? (
-							<div className="completed-rounds-list">
-								{[...completedRounds].reverse().map((round, index) => (
-									<article
-										className="completed-round-card"
-										key={`${round.ticketTitle}-${completedRounds.length - index}`}
-									>
-										<div className="completed-round-title">
-											<strong>{round.ticketTitle}</strong>
-											<span>
-												{round.votes.length} {copy.statVotes}
-											</span>
-										</div>
-										<div className="completed-votes">
-											{round.votes.map((completedVote) => (
-												<span
-													className="completed-vote-pill"
-													key={`${round.ticketTitle}-${completedVote.participantId}`}
-												>
-													{completedVote.participantName}:{' '}
-													{voteLabel(completedVote.vote, language)}
-												</span>
-											))}
-										</div>
-									</article>
-								))}
-							</div>
-						) : (
-							<p className="empty-panel-copy">{copy.noCompletedTickets}</p>
-						)}
-					</div>
+					{isHost ? null : (
+						<RoomPanel
+							title={copy.completedTickets}
+							actions={ticketHistoryActions}
+							className="completed-rounds-panel"
+						>
+							{ticketHistorySlides(false)}
+						</RoomPanel>
+					)}
 				</aside>
 
 				<main className="table-zone">
-					<div className="table-frame" ref={tableFrameRef}>
-						<div className="ellipse-table">
-							<div className="table-center">
-								<p>{copy.revealTable}</p>
-								<strong
-									style={{
-										fontSize: `clamp(1rem, ${Math.min(2.2, 40 / Math.max((state?.ticketTitle || copy.waitingTopic).length, 1))}rem, 2.2rem)`,
-									}}
+					<div className="table-stack">
+						{hostParticipant && !hostIsPlayer ? (
+							<div className="host-board" aria-label={copy.participantHost}>
+								<span className="host-board-label">{copy.participantHost}</span>
+								<article
+									className={`seat-card host-card ${hostParticipant.id === selfId ? 'self' : ''}`}
 								>
-									{state?.ticketTitle || copy.waitingTopic}
-								</strong>
-								<div
-									className={`scoreboard ${stats.revealed ? 'revealed' : 'pending'}`}
-								>
-									<div className="scoreboard-cell">
-										<span className="scoreboard-value">{stats.totalVotes}</span>
-										<span className="scoreboard-label">{copy.statVotes}</span>
-									</div>
-									<div className="scoreboard-cell">
-										<span className="scoreboard-value">{stats.mean}</span>
-										<span className="scoreboard-label">{copy.statMean}</span>
-									</div>
-									<div className="scoreboard-cell">
-										<span className="scoreboard-value">{stats.stdDev}</span>
-										<span className="scoreboard-label">{copy.statStdDev}</span>
-									</div>
-								</div>
-							</div>
-						</div>
-						{seats.map(({ participant, left, top, scale }) => (
-							<article
-								key={participant.id}
-								className={`seat-card ${participant.id === selfId ? 'self' : ''} ${scale < 0.7 ? 'compact' : ''}`}
-								style={
-									{
-										left: `${left}%`,
-										top: `${top}%`,
-										'--seat-scale': scale,
-									} as CSSProperties
-								}
-							>
-								<span className="seat-name">
-									{participant.name}
-									{participant.isHost ? ` · ${copy.participantHost}` : ''}
-								</span>
-								<strong>
-									{state?.votingState === 'revealed'
-										? voteLabel(participant.vote, language)
-										: participant.hasVoted
-											? copy.votedYes
-											: copy.voteNotCast}
-								</strong>
-								<small>
-									{participant.connected ? copy.online : copy.offline}
-								</small>
-							</article>
-						))}
-						{revealCountdownSeconds !== null ? (
-							<div
-								className="countdown-overlay"
-								role="status"
-								aria-live="polite"
-								data-testid="reveal-countdown"
-							>
-								<div>
-									<span>{revealCountdownSeconds}</span>
-									<small>
-										{formatText(copy.revealCountdown, {
-											seconds: revealCountdownSeconds,
-										})}
-									</small>
-								</div>
+									<span className="seat-name">{hostParticipant.name}</span>
+								</article>
 							</div>
 						) : null}
+						<div className="table-frame" ref={tableFrameRef}>
+							<div className="ellipse-table">
+								<div className="table-center">
+									<p>{copy.revealTable}</p>
+									<strong
+										style={{
+											fontSize: `clamp(1rem, ${Math.min(2.2, 40 / Math.max((state?.ticketTitle || copy.waitingTopic).length, 1))}rem, 2.2rem)`,
+										}}
+									>
+										{state?.ticketTitle || copy.waitingTopic}
+									</strong>
+									<div
+										className={`scoreboard ${stats.revealed ? 'revealed' : 'pending'}`}
+									>
+										<div className="scoreboard-cell">
+											<span className="scoreboard-value">
+												{stats.totalVotes}
+											</span>
+											<span className="scoreboard-label">{copy.statVotes}</span>
+										</div>
+										<div className="scoreboard-cell">
+											<span className="scoreboard-value">{stats.mean}</span>
+											<span className="scoreboard-label">{copy.statMean}</span>
+										</div>
+										<div className="scoreboard-cell">
+											<span className="scoreboard-value">{stats.stdDev}</span>
+											<span className="scoreboard-label">
+												{copy.statStdDev}
+											</span>
+										</div>
+									</div>
+								</div>
+							</div>
+							{hostParticipant && hostSeat ? (
+								<article
+									className={`seat-card host-player-card ${hostParticipant.id === selfId ? 'self' : ''}`}
+									style={
+										{
+											left: `${hostSeat.left}%`,
+											top: `${hostSeat.top}%`,
+											'--seat-scale': hostSeat.scale,
+										} as CSSProperties
+									}
+								>
+									<span className="seat-name">
+										{hostParticipant.name} · {copy.participantHost}
+									</span>
+									<strong>
+										{state?.votingState === 'revealed'
+											? voteLabel(hostParticipant.vote, language)
+											: hostParticipant.hasVoted
+												? copy.votedYes
+												: copy.voteNotCast}
+									</strong>
+									<small>
+										{hostParticipant.connected ? copy.online : copy.offline}
+									</small>
+								</article>
+							) : null}
+							{seats.map(({ participant, left, top, scale }) => (
+								<article
+									key={participant.id}
+									className={`seat-card ${participant.id === selfId ? 'self' : ''} ${scale < 0.7 ? 'compact' : ''}`}
+									style={
+										{
+											left: `${left}%`,
+											top: `${top}%`,
+											'--seat-scale': scale,
+										} as CSSProperties
+									}
+								>
+									<span className="seat-name">{participant.name}</span>
+									{isHost && participant.id !== selfId
+										? roleMenu(participant.id, 'observer', copy.makeObserver)
+										: null}
+									<strong>
+										{state?.votingState === 'revealed'
+											? voteLabel(participant.vote, language)
+											: participant.hasVoted
+												? copy.votedYes
+												: copy.voteNotCast}
+									</strong>
+									<small>
+										{participant.connected ? copy.online : copy.offline}
+									</small>
+								</article>
+							))}
+						</div>
+						<div className="observer-bench" aria-label={copy.observers}>
+							<span className="observer-bench-label">{copy.observers}</span>
+							{visibleObserverParticipants.map((participant) => (
+								<article
+									key={participant.id}
+									className={`seat-card observer-card ${participant.id === selfId ? 'self' : ''}`}
+								>
+									<span className="seat-name">{participant.name}</span>
+									{isHost && participant.id !== selfId
+										? roleMenu(participant.id, 'player', copy.makePlayer)
+										: null}
+								</article>
+							))}
+						</div>
 					</div>
+					{revealCountdownSeconds !== null ? (
+						<div
+							className="countdown-overlay"
+							role="status"
+							aria-live="polite"
+							data-testid="reveal-countdown"
+						>
+							<div>
+								<span>{revealCountdownSeconds}</span>
+							</div>
+						</div>
+					) : null}
 				</main>
 
 				<aside className="side-panel">
-					<div className="panel">
-						<div className="panel-header">
-							<h3>{copy.voteCards}</h3>
+					<RoomPanel
+						title={copy.voteCards}
+						badge={
 							<span className="badge muted-badge">
-								{voteLabel(self?.vote ?? null, language)}
+								{self?.role === 'observer'
+									? copy.voteDisabled
+									: voteLabel(self?.vote ?? null, language)}
 							</span>
-						</div>
+						}
+					>
 						<div className="modifier-section">
 							<div className="modifier-header">
 								<strong>{copy.optionalModifier}</strong>
@@ -532,53 +865,36 @@ export function RoomScreen({
 						<div className="card-grid">
 							{NUMERIC_CARD_VALUES.map((value) => {
 								const active =
-									self?.vote?.kind === 'estimate' &&
-									self.vote.base === value &&
-									self.vote.modifier === modifier;
+									selectedSpecialVote === null && selectedNumericVote === value;
 								return (
 									<button
 										key={value}
 										type="button"
 										className={`vote-card ${active ? 'active' : ''}`}
-										disabled={state?.votingState !== 'voting'}
-										onClick={() =>
-											sendMessage({
-												type: 'vote',
-												vote: {
-													kind: 'estimate',
-													base: value,
-													modifier,
-												},
-											})
-										}
+										disabled={!canSelectVoteCards}
+										onClick={() => {
+											setSelectedNumericVote(value);
+											setSelectedSpecialVote(null);
+										}}
 									>
 										<span>{value}</span>
-										{modifier !== 'base' ? (
-											<small>{modifier === 'flat' ? '♭' : '♯'}</small>
-										) : null}
 									</button>
 								);
 							})}
 						</div>
 						<div className="special-card-row">
 							{SPECIAL_CARD_VALUES.map((value) => {
-								const active =
-									self?.vote?.kind === 'special' && self.vote.value === value;
+								const active = selectedSpecialVote === value;
 								return (
 									<button
 										key={value}
 										type="button"
 										className={`vote-card special-card ${active ? 'active' : ''}`}
-										disabled={state?.votingState !== 'voting'}
-										onClick={() =>
-											sendMessage({
-												type: 'vote',
-												vote: {
-													kind: 'special',
-													value,
-												},
-											})
-										}
+										disabled={!canSelectVoteCards}
+										onClick={() => {
+											setSelectedSpecialVote(value);
+											setSelectedNumericVote(null);
+										}}
 									>
 										{value}
 									</button>
@@ -588,15 +904,21 @@ export function RoomScreen({
 						<button
 							className="vote-card clear-card"
 							type="button"
-							disabled={state?.votingState !== 'voting'}
-							onClick={() => sendMessage({ type: 'clear_vote' })}
+							disabled={!canSubmitVote}
+							onClick={handleClearVote}
 						>
 							{copy.clearVote}
 						</button>
-					</div>
+					</RoomPanel>
 				</aside>
 			</section>
 			{error ? <p className="error-text center-text">{error}</p> : null}
 		</div>
 	);
+}
+
+function voteKey(vote: VoteChoice): string {
+	return vote.kind === 'special'
+		? `special:${vote.value}`
+		: `estimate:${vote.base}:${vote.modifier}`;
 }

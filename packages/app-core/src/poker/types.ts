@@ -37,6 +37,8 @@ export type VoteChoice =
 	  }
 	| { readonly kind: 'special'; readonly value: SpecialCardValue };
 
+export type ParticipantRole = 'player' | 'observer';
+
 /**
  * A participant as tracked inside the room domain. Transport concerns (the
  * live WebSocket) are intentionally kept out of the domain model so the
@@ -45,6 +47,7 @@ export type VoteChoice =
 export interface Participant {
 	readonly id: string;
 	readonly name: string;
+	readonly role: ParticipantRole;
 	readonly vote: VoteChoice | null;
 }
 
@@ -78,6 +81,7 @@ export interface RoomState {
 export interface ParticipantView {
 	readonly id: string;
 	readonly name: string;
+	readonly role: ParticipantRole;
 	readonly vote: VoteChoice | null;
 	readonly hasVoted: boolean;
 	readonly connected: boolean;
@@ -101,8 +105,18 @@ export type ClientMessage =
 			readonly roomId: string;
 			readonly name?: string;
 			readonly claimHost?: boolean;
+			readonly role?: ParticipantRole;
 	  }
 	| { readonly type: 'set_name'; readonly name?: string }
+	| {
+			readonly type: 'set_role';
+			readonly participantId?: string;
+			readonly role: ParticipantRole;
+	  }
+	| {
+			readonly type: 'transfer_host';
+			readonly participantId: string;
+	  }
 	| { readonly type: 'set_ticket'; readonly ticketTitle?: string }
 	| { readonly type: 'vote'; readonly vote?: VoteChoice }
 	| { readonly type: 'clear_vote' }
