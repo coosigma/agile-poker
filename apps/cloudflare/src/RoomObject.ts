@@ -83,6 +83,10 @@ export class RoomDO implements DurableObject {
 			view.votingState !== 'countdown' ||
 			view.revealCountdownEndsAt === null
 		) {
+			if (this.revealCountdownTimer) {
+				clearTimeout(this.revealCountdownTimer);
+				this.revealCountdownTimer = null;
+			}
 			return;
 		}
 		if (this.revealCountdownTimer) {

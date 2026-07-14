@@ -215,13 +215,23 @@ export class MockRoomServer {
 	): void {
 		this.state = applyClientMessage(this.state, participantId, message);
 		if (this.state.votingState !== 'countdown') {
+			this.clearRevealCountdownTimer();
 			return;
 		}
 		if (options.completeCountdown) {
 			this.state = completeRevealCountdown(this.state);
+			this.clearRevealCountdownTimer();
 			return;
 		}
 		this.scheduleRevealCountdown();
+	}
+
+	private clearRevealCountdownTimer(): void {
+		if (!this.revealCountdownTimer) {
+			return;
+		}
+		clearTimeout(this.revealCountdownTimer);
+		this.revealCountdownTimer = null;
 	}
 
 	private scheduleRevealCountdown(): void {
@@ -229,6 +239,7 @@ export class MockRoomServer {
 			this.state.votingState !== 'countdown' ||
 			this.state.revealCountdownEndsAt === null
 		) {
+			this.clearRevealCountdownTimer();
 			return;
 		}
 		if (this.revealCountdownTimer) {

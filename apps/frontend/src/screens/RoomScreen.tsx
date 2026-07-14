@@ -127,7 +127,7 @@ export function RoomScreen({
 		}, 0);
 		const timer = window.setInterval(() => {
 			setNow(Date.now());
-		}, 100);
+		}, 500);
 		return () => {
 			window.clearTimeout(initialTimer);
 			window.clearInterval(timer);
@@ -474,7 +474,7 @@ export function RoomScreen({
 							<div
 								className="countdown-overlay"
 								role="status"
-								aria-live="assertive"
+								aria-live="polite"
 								data-testid="reveal-countdown"
 							>
 								<div>
