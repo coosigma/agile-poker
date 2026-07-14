@@ -24,3 +24,29 @@ test('the app loads and renders its entry shell', async ({ page }) => {
 		page.getByRole('button', { name: /Join an existing room/ }),
 	).toBeVisible();
 });
+
+test('the role selector supports keyboard radio navigation', async ({
+	page,
+}) => {
+	await page.addInitScript(() => {
+		window.localStorage.setItem('agile-poker:language', 'en');
+	});
+	await page.goto('/?room=ABC123');
+
+	const player = page.getByRole('radio', { name: /Player/ });
+	const observer = page.getByRole('radio', { name: /Observer/ });
+	await expect(player).toHaveAttribute('aria-checked', 'true');
+	await expect(player).toHaveAttribute('tabindex', '0');
+	await expect(observer).toHaveAttribute('tabindex', '-1');
+
+	await player.focus();
+	await page.keyboard.press('ArrowRight');
+	await expect(observer).toHaveAttribute('aria-checked', 'true');
+	await expect(observer).toHaveAttribute('tabindex', '0');
+	await expect(observer).toBeFocused();
+
+	await page.keyboard.press('ArrowLeft');
+	await expect(player).toHaveAttribute('aria-checked', 'true');
+	await expect(player).toHaveAttribute('tabindex', '0');
+	await expect(player).toBeFocused();
+});

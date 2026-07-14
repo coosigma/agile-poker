@@ -1,4 +1,4 @@
-import type { FormEvent } from 'react';
+import type { FormEvent, KeyboardEvent } from 'react';
 import { LanguageSelector } from '../components/LanguageSelector';
 import { STRINGS, type Language } from '../lib/i18n';
 import type { RoomIntentType } from '../lib/poker';
@@ -32,6 +32,46 @@ export function NameEntryScreen({
 	error,
 }: NameEntryScreenProps) {
 	const copy = STRINGS[language];
+	const roleOptions: readonly ParticipantRole[] = ['player', 'observer'];
+	const focusRoleChoice = (
+		event: KeyboardEvent<HTMLButtonElement>,
+		role: ParticipantRole,
+	) => {
+		setRoleDraft(role);
+		event.currentTarget.parentElement
+			?.querySelector<HTMLButtonElement>(`[data-role-choice="${role}"]`)
+			?.focus();
+	};
+	const handleRoleChoiceKeyDown = (
+		event: KeyboardEvent<HTMLButtonElement>,
+		role: ParticipantRole,
+	) => {
+		const currentIndex = roleOptions.indexOf(role);
+		if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+			event.preventDefault();
+			focusRoleChoice(
+				event,
+				roleOptions[(currentIndex + 1) % roleOptions.length],
+			);
+		}
+		if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+			event.preventDefault();
+			focusRoleChoice(
+				event,
+				roleOptions[
+					(currentIndex - 1 + roleOptions.length) % roleOptions.length
+				],
+			);
+		}
+		if (event.key === 'Home') {
+			event.preventDefault();
+			focusRoleChoice(event, roleOptions[0]);
+		}
+		if (event.key === 'End') {
+			event.preventDefault();
+			focusRoleChoice(event, roleOptions[roleOptions.length - 1]);
+		}
+	};
 	return (
 		<div className="app-shell landing-shell">
 			<section className="compact-card">
@@ -66,7 +106,10 @@ export function NameEntryScreen({
 							className={`role-choice ${roleDraft === 'player' ? 'active' : ''}`}
 							role="radio"
 							aria-checked={roleDraft === 'player'}
+							tabIndex={roleDraft === 'player' ? 0 : -1}
+							data-role-choice="player"
 							onClick={() => setRoleDraft('player')}
+							onKeyDown={(event) => handleRoleChoiceKeyDown(event, 'player')}
 						>
 							<strong>{copy.playerRole}</strong>
 							<span>{copy.playerRoleDesc}</span>
@@ -76,7 +119,10 @@ export function NameEntryScreen({
 							className={`role-choice ${roleDraft === 'observer' ? 'active' : ''}`}
 							role="radio"
 							aria-checked={roleDraft === 'observer'}
+							tabIndex={roleDraft === 'observer' ? 0 : -1}
+							data-role-choice="observer"
 							onClick={() => setRoleDraft('observer')}
+							onKeyDown={(event) => handleRoleChoiceKeyDown(event, 'observer')}
 						>
 							<strong>{copy.observerRole}</strong>
 							<span>{copy.observerRoleDesc}</span>

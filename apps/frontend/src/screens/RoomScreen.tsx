@@ -774,10 +774,7 @@ export function RoomScreen({
 										} as CSSProperties
 									}
 								>
-									<span className="seat-name">
-										{participant.name}
-										{participant.isHost ? ` · ${copy.participantHost}` : ''}
-									</span>
+									<span className="seat-name">{participant.name}</span>
 									{isHost && participant.id !== selfId
 										? roleMenu(participant.id, 'observer', copy.makeObserver)
 										: null}
@@ -801,10 +798,7 @@ export function RoomScreen({
 									key={participant.id}
 									className={`seat-card observer-card ${participant.id === selfId ? 'self' : ''}`}
 								>
-									<span className="seat-name">
-										{participant.name}
-										{participant.isHost ? ` · ${copy.participantHost}` : ''}
-									</span>
+									<span className="seat-name">{participant.name}</span>
 									{isHost && participant.id !== selfId
 										? roleMenu(participant.id, 'player', copy.makePlayer)
 										: null}
