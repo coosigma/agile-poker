@@ -805,6 +805,81 @@ input {
 	line-height: 1;
 }
 
+.panel-header-toggle {
+	display: flex;
+	flex: 1 1 auto;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	min-width: 0;
+	padding: 0;
+	background: none;
+	color: inherit;
+	text-align: left;
+	cursor: pointer;
+}
+
+.panel-header-toggle h3 {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.panel-toggle-icon {
+	flex: 0 0 auto;
+	color: var(--text-muted);
+	font-size: 0.8rem;
+}
+
+.panel-body-collapse {
+	display: grid;
+	grid-template-rows: 1fr;
+	transition: grid-template-rows 0.2s ease;
+	min-height: 0;
+}
+
+.panel-body {
+	overflow: hidden;
+	min-height: 0;
+}
+
+.panel-closed .panel-body-collapse {
+	margin-top: -1px;
+}
+
+.side-panel-accordion > .panel {
+	flex: 0 0 auto;
+	min-height: 0;
+}
+
+.side-panel-accordion > .panel.panel-closed {
+	padding-bottom: 12px;
+}
+
+/* Open panels in accordion mode share and, if needed, shrink into whatever
+ * space remains (rather than always taking their natural height), so the
+ * side panel itself never overflows its available height. If a shrunk
+ * panel's content still doesn't fit its allotted space, it scrolls
+ * internally instead of pushing the layout taller than the viewport. */
+.side-panel-accordion > .panel.panel-open {
+	flex: 1 1 auto;
+	display: flex;
+	flex-direction: column;
+}
+
+.side-panel-accordion > .panel.panel-open > .panel-header {
+	flex: 0 0 auto;
+}
+
+.side-panel-accordion > .panel.panel-open > .panel-body-collapse {
+	flex: 1 1 auto;
+	overflow: hidden;
+}
+
+.side-panel-accordion > .panel.panel-open > .panel-body-collapse > .panel-body {
+	overflow-y: auto;
+}
+
 .ticket-history-actions {
 	display: inline-flex;
 	align-items: center;

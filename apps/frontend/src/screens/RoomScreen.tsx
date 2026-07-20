@@ -3,12 +3,14 @@ import {
 	type FormEvent,
 	type MouseEvent,
 	useEffect,
+	useMemo,
 	useRef,
 	useState,
 } from 'react';
 import { InfoTip } from '../components/InfoTip';
 import { LanguageSelector } from '../components/LanguageSelector';
 import { RoomPanel } from '../components/RoomPanel';
+import { usePanelAccordion } from '../hooks/usePanelAccordion';
 import { useRoomSocket } from '../hooks/useRoomSocket';
 import { STRINGS, type Language } from '../lib/i18n';
 import { computeScoreboardStats } from '../lib/scoreboard';
@@ -109,6 +111,44 @@ export function RoomScreen({
 		state?.participants.find((participant) => participant.id === selfId) ??
 		null;
 	const isHost = Boolean(self?.isHost);
+	// Left side-panel only: when its fully-expanded content would overflow the
+	// available height, panels become a collapsible accordion. "Room info" and
+	// "Voting controls" open by default (they hold the role menu and the
+	// primary Start/Reveal/Done actions); "Tickets history" starts closed.
+	// Users may freely open/close any combination afterwards — if the open
+	// set still doesn't fit, CSS shares/shrinks the remaining space and
+	// scrolls individual panels rather than overflowing the page. The right
+	// (vote cards) panel is untouched.
+	const leftSideRef = useRef<HTMLElement | null>(null);
+	const roomInfoHeaderRef = useRef<HTMLDivElement | null>(null);
+	const roomInfoBodyRef = useRef<HTMLDivElement | null>(null);
+	const controlHeaderRef = useRef<HTMLDivElement | null>(null);
+	const controlBodyRef = useRef<HTMLDivElement | null>(null);
+	const historyHeaderRef = useRef<HTMLDivElement | null>(null);
+	const historyBodyRef = useRef<HTMLDivElement | null>(null);
+	const leftPanelRefs = useMemo(
+		() => ({
+			roomInfo: { header: roomInfoHeaderRef, body: roomInfoBodyRef },
+			control: { header: controlHeaderRef, body: controlBodyRef },
+			history: { header: historyHeaderRef, body: historyBodyRef },
+		}),
+		[],
+	);
+	const leftPanelIds = useMemo(
+		() =>
+			isHost ? ['roomInfo', 'control', 'history'] : ['roomInfo', 'history'],
+		[isHost],
+	);
+	const leftDefaultOpenIds = useMemo(
+		() => (isHost ? ['roomInfo', 'control'] : ['roomInfo']),
+		[isHost],
+	);
+	const { isAccordion, isPanelOpen, togglePanel } = usePanelAccordion(
+		leftSideRef,
+		leftPanelRefs,
+		leftPanelIds,
+		leftDefaultOpenIds,
+	);
 	const participants = state?.participants ?? [];
 	const hostParticipant =
 		participants.find((participant) => participant.isHost) ?? null;
@@ -367,13 +407,8 @@ export function RoomScreen({
 	const shouldShowCurrentHistorySelfVote =
 		self?.role === 'player' && Boolean(currentHistory);
 
-	const ticketHistorySlides = (showTitle: boolean) => (
+	const ticketHistorySlides = (
 		<div className="ticket-history">
-			{showTitle ? (
-				<div className="ticket-history-header">
-					<strong>{copy.completedTickets}</strong>
-				</div>
-			) : null}
 			{currentHistory ? (
 				<article className="completed-round-card ticket-history-slide">
 					<div className="completed-round-title">
@@ -514,10 +549,18 @@ export function RoomScreen({
 			) : null}
 
 			<section className="room-layout">
-				<aside className="side-panel">
+				<aside
+					className={`side-panel ${isAccordion ? 'side-panel-accordion' : ''}`}
+					ref={leftSideRef}
+				>
 					<RoomPanel
 						title={copy.roomInfo}
 						className="room-info-panel"
+						collapsible={isAccordion}
+						open={isPanelOpen('roomInfo')}
+						onToggleOpen={() => togglePanel('roomInfo')}
+						headerRef={roomInfoHeaderRef}
+						bodyRef={roomInfoBodyRef}
 						badge={
 							<span className="badge">
 								{connectedCount} {copy.connected}
@@ -587,7 +630,14 @@ export function RoomScreen({
 					</RoomPanel>
 
 					{isHost ? (
-						<RoomPanel title={copy.hostControls} actions={ticketHistoryActions}>
+						<RoomPanel
+							title={copy.hostControls}
+							collapsible={isAccordion}
+							open={isPanelOpen('control')}
+							onToggleOpen={() => togglePanel('control')}
+							headerRef={controlHeaderRef}
+							bodyRef={controlBodyRef}
+						>
 							<form
 								className="stack host-ticket-form"
 								onSubmit={handleTicketSubmit}
@@ -676,19 +726,21 @@ export function RoomScreen({
 									<span className="control-pad-label">{copy.doneTicket}</span>
 								</button>
 							</div>
-							{ticketHistorySlides(true)}
 						</RoomPanel>
 					) : null}
 
-					{isHost ? null : (
-						<RoomPanel
-							title={copy.completedTickets}
-							actions={ticketHistoryActions}
-							className="completed-rounds-panel"
-						>
-							{ticketHistorySlides(false)}
-						</RoomPanel>
-					)}
+					<RoomPanel
+						title={copy.completedTickets}
+						actions={ticketHistoryActions}
+						className="completed-rounds-panel"
+						collapsible={isAccordion}
+						open={isPanelOpen('history')}
+						onToggleOpen={() => togglePanel('history')}
+						headerRef={historyHeaderRef}
+						bodyRef={historyBodyRef}
+					>
+						{ticketHistorySlides}
+					</RoomPanel>
 				</aside>
 
 				<main className="table-zone">
