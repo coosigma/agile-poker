@@ -545,12 +545,8 @@ export function RoomScreen({
 	return (
 		<div className="app-shell room-shell">
 			<section className="topbar">
-				<div className="room-heading" title={copy.roomNameTooltip}>
-					<span
-						className="room-heading-icon-chip"
-						role="img"
-						aria-label={copy.roomLabel}
-					>
+				<div className="room-heading" title={`${copy.roomId}: ${roomId}`}>
+					<span className="room-heading-icon-chip" aria-hidden="true">
 						<svg
 							className="room-heading-icon"
 							viewBox="0 0 16 16"
@@ -561,6 +557,7 @@ export function RoomScreen({
 							<circle cx="10.4" cy="8" r="0.9" />
 						</svg>
 					</span>
+					<span className="room-heading-label">{copy.roomLabel}</span>
 					<h2 className="room-title">{roomId}</h2>
 				</div>
 				<div className="topbar-actions">

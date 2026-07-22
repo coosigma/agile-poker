@@ -840,7 +840,18 @@ input:focus-visible {
 	stroke: none;
 }
 
+.room-heading-label {
+	flex-shrink: 0;
+	color: var(--accent);
+	text-transform: uppercase;
+	letter-spacing: 0.14em;
+	font-size: 0.78rem;
+	font-weight: 700;
+}
+
 .room-title {
+	flex: 1 1 auto;
+	min-width: 0;
 	font-size: clamp(1.3rem, 2.5vw, 2rem);
 	line-height: 1.1;
 	overflow: hidden;
