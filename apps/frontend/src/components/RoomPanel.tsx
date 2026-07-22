@@ -11,6 +11,10 @@ interface RoomPanelProps {
 	/** Whether the panel body is expanded. Ignored unless `collapsible` is set. */
 	readonly open?: boolean;
 	readonly onToggleOpen?: () => void;
+	/** aria-label for the collapse-toggle icon button when the panel is open. */
+	readonly collapseLabel?: string;
+	/** aria-label for the collapse-toggle icon button when the panel is closed. */
+	readonly expandLabel?: string;
 	/** Measures the header's natural height for overflow detection. */
 	readonly headerRef?: Ref<HTMLDivElement>;
 	/** Measures the body's natural (uncollapsed) content height for overflow detection. */
@@ -26,6 +30,8 @@ export function RoomPanel({
 	collapsible = false,
 	open = true,
 	onToggleOpen,
+	collapseLabel = 'Collapse panel',
+	expandLabel = 'Expand panel',
 	headerRef,
 	bodyRef,
 }: RoomPanelProps) {
@@ -60,7 +66,7 @@ export function RoomPanel({
 						type="button"
 						className="panel-toggle-icon"
 						aria-expanded={isOpen}
-						aria-label={isOpen ? 'Collapse panel' : 'Expand panel'}
+						aria-label={isOpen ? collapseLabel : expandLabel}
 						onClick={onToggleOpen}
 					>
 						{isOpen ? '▾' : '▸'}

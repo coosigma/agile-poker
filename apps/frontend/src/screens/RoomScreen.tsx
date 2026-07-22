@@ -580,6 +580,8 @@ export function RoomScreen({
 						collapsible={isAccordion}
 						open={isPanelOpen('roomInfo')}
 						onToggleOpen={() => togglePanel('roomInfo')}
+						collapseLabel={copy.collapsePanel}
+						expandLabel={copy.expandPanel}
 						headerRef={roomInfoHeaderRef}
 						bodyRef={roomInfoBodyRef}
 						badge={
@@ -650,6 +652,8 @@ export function RoomScreen({
 							collapsible={isAccordion}
 							open={isPanelOpen('control')}
 							onToggleOpen={() => togglePanel('control')}
+							collapseLabel={copy.collapsePanel}
+							expandLabel={copy.expandPanel}
 							headerRef={controlHeaderRef}
 							bodyRef={controlBodyRef}
 						>
@@ -751,6 +755,8 @@ export function RoomScreen({
 						collapsible={isAccordion}
 						open={isPanelOpen('history')}
 						onToggleOpen={() => togglePanel('history')}
+						collapseLabel={copy.collapsePanel}
+						expandLabel={copy.expandPanel}
 						headerRef={historyHeaderRef}
 						bodyRef={historyBodyRef}
 					>
