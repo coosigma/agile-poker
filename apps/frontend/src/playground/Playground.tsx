@@ -7,7 +7,13 @@
  * server, so the preview is fully interactive (you can vote, start rounds and
  * reveal exactly as against the real worker) while staying offline.
  */
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import {
+	type PointerEvent as ReactPointerEvent,
+	useLayoutEffect,
+	useMemo,
+	useRef,
+	useState,
+} from 'react';
 import { getInitialLanguage, type Language } from '../lib/i18n';
 import { clearRoomIntent, setRoomIntent, voteLabel } from '../lib/poker';
 import { installMockRoomSocket } from '../mocks/mock-room-socket';
@@ -39,6 +45,34 @@ function crowdOverride(): number | null {
 	return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
+interface ViewportSize {
+	readonly width: number;
+	readonly height: number;
+}
+
+// Minimum draggable/typed frame size — small enough to still reach the
+// shortest accordion bucket, but not so small the room layout breaks down.
+const MIN_FRAME_WIDTH = 480;
+const MIN_FRAME_HEIGHT = 360;
+
+// Preset simulated viewport sizes for previewing the left sidebar's
+// short-screen accordion behavior without resizing the real browser window.
+// Heights span both sides of the `styles.css` media-query buckets
+// (800px/650px).
+const VIEWPORT_PRESETS: ReadonlyArray<{
+	readonly label: string;
+	readonly width: number;
+	readonly height: number;
+}> = [
+	{ label: '1280 × 900 (tall)', width: 1280, height: 900 },
+	{ label: '1280 × 800', width: 1280, height: 800 },
+	{ label: '1280 × 720', width: 1280, height: 720 },
+	{ label: '1024 × 700', width: 1024, height: 700 },
+	{ label: '1024 × 650', width: 1024, height: 650 },
+	{ label: '900 × 600 (short)', width: 900, height: 600 },
+	{ label: '820 × 500 (very short)', width: 820, height: 500 },
+];
+
 export function Playground() {
 	const [language, setLanguage] = useState<Language>(getInitialLanguage);
 
@@ -53,6 +87,83 @@ export function Playground() {
 
 	const scenario =
 		scenarios.find((item) => item.id === scenarioId) ?? scenarios[0];
+
+	// Simulated viewport size for the stage frame; `null` means "auto" (the
+	// frame just fills the stage, tracking the real window like before).
+	// Settable three ways: dragging the frame's resize handle, picking a
+	// preset, or typing exact width/height numbers.
+	const [viewportSize, setViewportSize] = useState<ViewportSize | null>(null);
+	const [widthDraft, setWidthDraft] = useState('1280');
+	const [heightDraft, setHeightDraft] = useState('720');
+	const frameRef = useRef<HTMLDivElement | null>(null);
+	const dragStateRef = useRef<{
+		readonly startX: number;
+		readonly startY: number;
+		readonly startWidth: number;
+		readonly startHeight: number;
+	} | null>(null);
+
+	function applySize(size: ViewportSize): void {
+		setViewportSize(size);
+		setWidthDraft(String(size.width));
+		setHeightDraft(String(size.height));
+	}
+
+	function applyCustomSize(): void {
+		const width = Number.parseInt(widthDraft, 10);
+		const height = Number.parseInt(heightDraft, 10);
+		if (!Number.isFinite(width) || !Number.isFinite(height)) {
+			return;
+		}
+		applySize({
+			width: Math.max(MIN_FRAME_WIDTH, width),
+			height: Math.max(MIN_FRAME_HEIGHT, height),
+		});
+	}
+
+	// Drag-to-resize: grabbing the handle first snapshots the frame's current
+	// on-screen size (so dragging from "auto" mode starts from what's already
+	// visible, not a jump), then tracks the pointer via native capture so the
+	// resize keeps working even if the cursor leaves the handle mid-drag.
+	function beginResize(event: ReactPointerEvent<HTMLDivElement>): void {
+		const frame = frameRef.current;
+		if (!frame) {
+			return;
+		}
+		const rect = frame.getBoundingClientRect();
+		dragStateRef.current = {
+			startX: event.clientX,
+			startY: event.clientY,
+			startWidth: rect.width,
+			startHeight: rect.height,
+		};
+		applySize({
+			width: Math.round(rect.width),
+			height: Math.round(rect.height),
+		});
+		event.currentTarget.setPointerCapture(event.pointerId);
+	}
+
+	function onResizeMove(event: ReactPointerEvent<HTMLDivElement>): void {
+		const drag = dragStateRef.current;
+		if (!drag) {
+			return;
+		}
+		const width = Math.max(
+			MIN_FRAME_WIDTH,
+			Math.round(drag.startWidth + (event.clientX - drag.startX)),
+		);
+		const height = Math.max(
+			MIN_FRAME_HEIGHT,
+			Math.round(drag.startHeight + (event.clientY - drag.startY)),
+		);
+		applySize({ width, height });
+	}
+
+	function endResize(event: ReactPointerEvent<HTMLDivElement>): void {
+		dragStateRef.current = null;
+		event.currentTarget.releasePointerCapture(event.pointerId);
+	}
 
 	// Keep a handle on the live mock server so the simulate controls can add or
 	// remove participants at runtime, plus the current simulated roster for the UI.
@@ -172,6 +283,69 @@ export function Playground() {
 						</li>
 					))}
 				</ul>
+				<section className="playground-viewport" data-testid="viewport-panel">
+					<h2 className="playground-viewport-title">Viewport size</h2>
+					<p className="playground-hint">
+						Drag the ⤡ handle at the bottom-right corner of the preview, pick a
+						preset, or type an exact width × height to test the sidebar’s
+						short-screen accordion behavior.
+					</p>
+					<div className="playground-viewport-presets">
+						{VIEWPORT_PRESETS.map((preset) => (
+							<button
+								key={preset.label}
+								type="button"
+								className="playground-viewport-preset"
+								onClick={() => applySize(preset)}
+								data-testid={`viewport-preset-${preset.width}x${preset.height}`}
+							>
+								{preset.label}
+							</button>
+						))}
+					</div>
+					<div className="playground-viewport-custom">
+						<label className="playground-viewport-field">
+							<span>W</span>
+							<input
+								type="number"
+								min={MIN_FRAME_WIDTH}
+								value={widthDraft}
+								onChange={(event) => setWidthDraft(event.target.value)}
+								data-testid="viewport-width-input"
+							/>
+						</label>
+						<span className="playground-viewport-x" aria-hidden="true">
+							×
+						</span>
+						<label className="playground-viewport-field">
+							<span>H</span>
+							<input
+								type="number"
+								min={MIN_FRAME_HEIGHT}
+								value={heightDraft}
+								onChange={(event) => setHeightDraft(event.target.value)}
+								data-testid="viewport-height-input"
+							/>
+						</label>
+						<button
+							type="button"
+							className="playground-viewport-apply"
+							onClick={applyCustomSize}
+							data-testid="viewport-apply"
+						>
+							Apply
+						</button>
+					</div>
+					<button
+						type="button"
+						className="playground-viewport-reset"
+						onClick={() => setViewportSize(null)}
+						disabled={viewportSize === null}
+						data-testid="viewport-reset"
+					>
+						Reset to real window
+					</button>
+				</section>
 				<section className="playground-simulate" data-testid="simulate-panel">
 					<h2 className="playground-simulate-title">Simulate players</h2>
 					<p className="playground-hint">
@@ -295,13 +469,42 @@ export function Playground() {
 				</section>
 			</aside>
 			<section className="playground-stage">
-				<RoomScreen
-					key={scenario.id}
-					language={language}
-					setLanguage={setLanguage}
-					roomId={PLAYGROUND_ROOM_ID}
-					name={YOU_NAME}
-				/>
+				<div
+					ref={frameRef}
+					className={
+						viewportSize === null
+							? 'playground-viewport-frame'
+							: 'playground-viewport-frame is-fixed'
+					}
+					style={
+						viewportSize === null
+							? undefined
+							: {
+									width: `${viewportSize.width}px`,
+									height: `${viewportSize.height}px`,
+								}
+					}
+					data-testid="viewport-frame"
+				>
+					<RoomScreen
+						key={scenario.id}
+						language={language}
+						setLanguage={setLanguage}
+						roomId={PLAYGROUND_ROOM_ID}
+						name={YOU_NAME}
+					/>
+					<div
+						className="playground-viewport-resize-handle"
+						onPointerDown={beginResize}
+						onPointerMove={onResizeMove}
+						onPointerUp={endResize}
+						data-testid="viewport-resize-handle"
+						aria-label="Drag to resize the preview viewport"
+						role="slider"
+						aria-valuenow={viewportSize?.height ?? 0}
+						tabIndex={0}
+					/>
+				</div>
 			</section>
 		</div>
 	);

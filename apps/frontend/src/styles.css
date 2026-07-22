@@ -24,7 +24,32 @@
 	--secondary-soft: rgba(142, 199, 255, 0.14);
 	--text-muted: #b6bece;
 	--success: #61d6ab;
+	--success-soft: rgba(97, 214, 171, 0.14);
 	--danger: #ff8d7d;
+	/* Vertical spacing tiers for the y-axis only. Default values suit tall
+	 * viewports; shorter viewports step down through the media-query
+	 * buckets below so short screens reclaim layout height instead of
+	 * losing it to space sized for tall viewports. Horizontal spacing is
+	 * untouched. */
+	--space-y-sm: 12px;
+	--space-y-md: 16px;
+	--space-y-lg: 24px;
+}
+
+@media (max-height: 800px) {
+	:root {
+		--space-y-sm: 8px;
+		--space-y-md: 12px;
+		--space-y-lg: 16px;
+	}
+}
+
+@media (max-height: 650px) {
+	:root {
+		--space-y-sm: 4px;
+		--space-y-md: 8px;
+		--space-y-lg: 10px;
+	}
 }
 
 * {
@@ -541,6 +566,11 @@ input {
 	color: #fff;
 }
 
+input:focus-visible {
+	outline: none;
+	box-shadow: 0 0 0 2px rgba(88, 153, 255, 0.6);
+}
+
 .primary-button,
 .secondary-button,
 .ghost-button,
@@ -755,10 +785,10 @@ input {
 
 .room-shell {
 	height: 100vh;
-	padding: 12px 0 24px;
+	padding: var(--space-y-sm) 0 var(--space-y-lg);
 	display: grid;
 	grid-template-rows: auto minmax(0, 1fr);
-	gap: 12px;
+	gap: var(--space-y-sm);
 	overflow: hidden;
 }
 
@@ -767,7 +797,7 @@ input {
 	align-items: center;
 	justify-content: space-between;
 	gap: 16px;
-	padding: 22px 18px;
+	padding: var(--space-y-lg) 18px;
 	margin: 4px 0 0;
 	backdrop-filter: none;
 	box-shadow: none;
@@ -809,7 +839,6 @@ input {
 	display: flex;
 	flex: 1 1 auto;
 	align-items: center;
-	justify-content: space-between;
 	gap: 8px;
 	min-width: 0;
 	padding: 0;
@@ -827,8 +856,21 @@ input {
 
 .panel-toggle-icon {
 	flex: 0 0 auto;
+	display: grid;
+	place-items: center;
+	width: 20px;
+	height: 20px;
+	padding: 0;
+	border: 0;
+	border-radius: 6px;
+	background: none;
 	color: var(--text-muted);
 	font-size: 0.8rem;
+	cursor: pointer;
+}
+
+.panel-toggle-icon:hover {
+	background: rgba(255, 255, 255, 0.06);
 }
 
 .panel-body-collapse {
@@ -843,10 +885,23 @@ input {
 	min-height: 0;
 }
 
+/* Once open, allow popovers (e.g. the role-switch menu) to overflow the
+ * panel body instead of being clipped by the collapse-animation wrapper.
+ * `overflow: hidden` is still required while the panel is animating closed
+ * so the grid-template-rows 1fr -> 0fr trick can shrink it to nothing. */
+.panel-open > .panel-body-collapse > .panel-body {
+	overflow: visible;
+}
+
 .panel-closed .panel-body-collapse {
 	margin-top: -1px;
 }
 
+/* Accordion panels always take their natural (content) height, whether
+ * open or closed — never stretched to fill leftover space. If the open
+ * panels' combined natural height exceeds the available area, the side
+ * panel container itself scrolls as a single unit (see `.side-panel`'s
+ * `overflow-y: auto`), rather than each panel scrolling independently. */
 .side-panel-accordion > .panel {
 	flex: 0 0 auto;
 	min-height: 0;
@@ -854,30 +909,6 @@ input {
 
 .side-panel-accordion > .panel.panel-closed {
 	padding-bottom: 12px;
-}
-
-/* Open panels in accordion mode share and, if needed, shrink into whatever
- * space remains (rather than always taking their natural height), so the
- * side panel itself never overflows its available height. If a shrunk
- * panel's content still doesn't fit its allotted space, it scrolls
- * internally instead of pushing the layout taller than the viewport. */
-.side-panel-accordion > .panel.panel-open {
-	flex: 1 1 auto;
-	display: flex;
-	flex-direction: column;
-}
-
-.side-panel-accordion > .panel.panel-open > .panel-header {
-	flex: 0 0 auto;
-}
-
-.side-panel-accordion > .panel.panel-open > .panel-body-collapse {
-	flex: 1 1 auto;
-	overflow: hidden;
-}
-
-.side-panel-accordion > .panel.panel-open > .panel-body-collapse > .panel-body {
-	overflow-y: auto;
 }
 
 .ticket-history-actions {
@@ -925,20 +956,26 @@ input {
 	font-size: 0.82rem;
 }
 
-.status-pill,
 .badge {
 	display: inline-flex;
 	align-items: center;
 	gap: 8px;
 	padding: 6px 10px;
 	border-radius: 999px;
-}
-
-.badge {
 	background: var(--accent-strong);
 	color: #121722;
 	font-size: 0.76rem;
 	font-weight: 700;
+}
+
+.badge-progress {
+	background: var(--secondary-soft);
+	color: var(--secondary);
+}
+
+.badge-success {
+	background: var(--success-soft);
+	color: var(--success);
 }
 
 .muted-badge {
@@ -1025,29 +1062,6 @@ input {
 	color: var(--accent-strong);
 }
 
-.status-pill {
-	background: rgba(255, 255, 255, 0.06);
-}
-
-.status-dot {
-	width: 10px;
-	height: 10px;
-	border-radius: 50%;
-	display: inline-block;
-}
-
-.status-dot.open {
-	background: var(--success);
-}
-
-.status-dot.connecting {
-	background: var(--accent);
-}
-
-.status-dot.closed {
-	background: var(--danger);
-}
-
 .room-layout {
 	display: grid;
 	grid-template-columns: 280px minmax(0, 1fr) 300px;
@@ -1059,12 +1073,19 @@ input {
 .side-panel {
 	display: flex;
 	flex-direction: column;
-	gap: 12px;
+	gap: var(--space-y-sm);
 	min-height: 0;
 	align-items: stretch;
 	justify-content: flex-start;
 	overflow-y: auto;
-	padding-right: 2px;
+}
+
+.side-panel-fit {
+	overflow: hidden;
+}
+
+.side-panel-fit-content {
+	transform-origin: top center;
 }
 
 .side-panel > .panel {
@@ -1072,7 +1093,8 @@ input {
 }
 
 .panel {
-	padding: 16px;
+	padding-block: var(--space-y-md);
+	padding-inline: 16px;
 	min-height: 0;
 }
 
@@ -1237,7 +1259,6 @@ input {
 	min-height: 0;
 	display: grid;
 	place-items: center;
-	padding-bottom: 34px;
 }
 
 .table-stack {

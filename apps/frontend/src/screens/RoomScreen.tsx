@@ -10,6 +10,7 @@ import {
 import { InfoTip } from '../components/InfoTip';
 import { LanguageSelector } from '../components/LanguageSelector';
 import { RoomPanel } from '../components/RoomPanel';
+import { useFitScale } from '../hooks/useFitScale';
 import { usePanelAccordion } from '../hooks/usePanelAccordion';
 import { useRoomSocket } from '../hooks/useRoomSocket';
 import { STRINGS, type Language } from '../lib/i18n';
@@ -45,8 +46,9 @@ export function RoomScreen({
 	name,
 }: RoomScreenProps) {
 	const copy = STRINGS[language];
-	const { state, selfId, socketStatus, connectionNotice, error, sendMessage } =
-		useRoomSocket({ enabled: true, roomId, name, language });
+	const { state, selfId, connectionNotice, error, sendMessage } = useRoomSocket(
+		{ enabled: true, roomId, name, language },
+	);
 
 	const [ticketDraft, setTicketDraft] = useState('');
 	const [modifier, setModifier] = useState<VoteModifier>('base');
@@ -82,22 +84,24 @@ export function RoomScreen({
 	}, []);
 
 	useEffect(() => {
-		const closeSeatRoleMenus = (event: PointerEvent) => {
+		const closeRoleMenus = (event: PointerEvent) => {
 			const target = event.target;
 			if (
 				target instanceof Element &&
-				target.closest('.seat-role-menu') !== null
+				target.closest('.seat-role-menu, .self-role-menu') !== null
 			) {
 				return;
 			}
 			document
-				.querySelectorAll<HTMLDetailsElement>('.seat-role-menu[open]')
+				.querySelectorAll<HTMLDetailsElement>(
+					'.seat-role-menu[open], .self-role-menu[open]',
+				)
 				.forEach((menu) => menu.removeAttribute('open'));
 		};
 
-		document.addEventListener('pointerdown', closeSeatRoleMenus);
+		document.addEventListener('pointerdown', closeRoleMenus);
 		return () => {
-			document.removeEventListener('pointerdown', closeSeatRoleMenus);
+			document.removeEventListener('pointerdown', closeRoleMenus);
 		};
 	}, []);
 
@@ -112,13 +116,16 @@ export function RoomScreen({
 		null;
 	const isHost = Boolean(self?.isHost);
 	// Left side-panel only: when its fully-expanded content would overflow the
-	// available height, panels become a collapsible accordion. "Room info" and
-	// "Voting controls" open by default (they hold the role menu and the
-	// primary Start/Reveal/Done actions); "Tickets history" starts closed.
-	// Users may freely open/close any combination afterwards — if the open
-	// set still doesn't fit, CSS shares/shrinks the remaining space and
-	// scrolls individual panels rather than overflowing the page. The right
-	// (vote cards) panel is untouched.
+	// available height, panels become a collapsible accordion. "Voting
+	// controls" (host's primary Start/Reveal/Done actions) has the highest
+	// priority to stay open, then "Room info"; "Tickets history" is never
+	// auto-opened and always starts closed. As the viewport gets shorter,
+	// lower-priority panels automatically collapse on their own (no fixed
+	// breakpoint — purely measured against the container's real height).
+	// Users may still freely open/close any combination afterwards — if the
+	// open set still doesn't fit, CSS shares/shrinks the remaining space and
+	// scrolls the side panel as a whole rather than overflowing the page. The
+	// right (vote cards) panel is untouched.
 	const leftSideRef = useRef<HTMLElement | null>(null);
 	const roomInfoHeaderRef = useRef<HTMLDivElement | null>(null);
 	const roomInfoBodyRef = useRef<HTMLDivElement | null>(null);
@@ -139,16 +146,32 @@ export function RoomScreen({
 			isHost ? ['roomInfo', 'control', 'history'] : ['roomInfo', 'history'],
 		[isHost],
 	);
-	const leftDefaultOpenIds = useMemo(
-		() => (isHost ? ['roomInfo', 'control'] : ['roomInfo']),
+	const leftOpenPriority = useMemo(
+		() => (isHost ? ['control', 'roomInfo'] : ['roomInfo']),
+		[isHost],
+	);
+	// When a manually opened panel would overflow, other open panels are
+	// auto-closed in this order (most dispensable first) to keep it visible
+	// without a scrollbar: history, then room info, then voting controls.
+	const leftClosePriority = useMemo(
+		() =>
+			isHost ? ['history', 'roomInfo', 'control'] : ['history', 'roomInfo'],
 		[isHost],
 	);
 	const { isAccordion, isPanelOpen, togglePanel } = usePanelAccordion(
 		leftSideRef,
 		leftPanelRefs,
 		leftPanelIds,
-		leftDefaultOpenIds,
+		leftOpenPriority,
+		leftClosePriority,
 	);
+	// Right side-panel (vote cards): rather than showing a scrollbar when its
+	// natural content is taller than the available space, it's uniformly
+	// scaled down to fit — measured live against real heights, not a fixed
+	// breakpoint.
+	const rightSideRef = useRef<HTMLElement | null>(null);
+	const voteCardsContentRef = useRef<HTMLDivElement | null>(null);
+	const voteCardsScale = useFitScale(rightSideRef, voteCardsContentRef);
 	const participants = state?.participants ?? [];
 	const hostParticipant =
 		participants.find((participant) => participant.isHost) ?? null;
@@ -165,12 +188,20 @@ export function RoomScreen({
 		(participant) => !participant.isHost,
 	);
 	const completedRounds = state?.completedRounds ?? [];
-	const connectedCount = playerParticipants.filter(
-		(participant) => participant.connected,
-	).length;
 	const votedCount = playerParticipants.filter(
 		(participant) => participant.hasVoted,
 	).length;
+	// Color the vote-progress badge by stage: neutral before voting starts,
+	// in-progress while collecting votes, and success once revealed/done.
+	const votingState = state?.votingState ?? 'noTopic';
+	const voteProgressBadgeClass =
+		votingState === 'countdown' ||
+		votingState === 'revealed' ||
+		votingState === 'completed'
+			? 'badge-success'
+			: votingState === 'voting'
+				? 'badge-progress'
+				: 'muted-badge';
 	const savedTicketTitle = state?.ticketTitle ?? '';
 	const ticketDraftValue = ticketDraft.trim();
 	const hasUnsavedTicketChange = ticketDraftValue !== savedTicketTitle;
@@ -524,16 +555,6 @@ export function RoomScreen({
 						setLanguage={setLanguage}
 						compact
 					/>
-					<div className="status-pill">
-						<span className={`status-dot ${socketStatus}`}></span>
-						<span>
-							{socketStatus === 'open'
-								? copy.statusOnline
-								: socketStatus === 'connecting'
-									? copy.statusConnecting
-									: copy.statusClosed}
-						</span>
-					</div>
 					<button
 						className="secondary-button"
 						onClick={async () => {
@@ -562,8 +583,8 @@ export function RoomScreen({
 						headerRef={roomInfoHeaderRef}
 						bodyRef={roomInfoBodyRef}
 						badge={
-							<span className="badge">
-								{connectedCount} {copy.connected}
+							<span className={`badge ${voteProgressBadgeClass}`}>
+								{votedCount}/{playerParticipants.length}
 							</span>
 						}
 					>
@@ -575,12 +596,6 @@ export function RoomScreen({
 										language,
 										state?.votingState ?? 'noTopic',
 									)}
-								</strong>
-							</div>
-							<div>
-								<span>{copy.voted}</span>
-								<strong>
-									{votedCount}/{playerParticipants.length}
 								</strong>
 							</div>
 							<div>
@@ -809,9 +824,6 @@ export function RoomScreen({
 												? copy.votedYes
 												: copy.voteNotCast}
 									</strong>
-									<small>
-										{hostParticipant.connected ? copy.online : copy.offline}
-									</small>
 								</article>
 							) : null}
 							{seats.map(({ participant, left, top, scale }) => (
@@ -837,9 +849,6 @@ export function RoomScreen({
 												? copy.votedYes
 												: copy.voteNotCast}
 									</strong>
-									<small>
-										{participant.connected ? copy.online : copy.offline}
-									</small>
 								</article>
 							))}
 						</div>
@@ -872,96 +881,108 @@ export function RoomScreen({
 					) : null}
 				</main>
 
-				<aside className="side-panel">
-					<RoomPanel
-						title={copy.voteCards}
-						badge={
-							<span className="badge muted-badge">
-								{self?.role === 'observer'
-									? copy.voteDisabled
-									: voteLabel(self?.vote ?? null, language)}
-							</span>
+				<aside className="side-panel side-panel-fit" ref={rightSideRef}>
+					<div
+						className="side-panel-fit-content"
+						ref={voteCardsContentRef}
+						style={
+							{
+								transform: `scale(${voteCardsScale})`,
+								width: `calc(100% / ${voteCardsScale})`,
+							} as CSSProperties
 						}
 					>
-						<div className="modifier-section">
-							<div className="modifier-header">
-								<strong>{copy.optionalModifier}</strong>
-								<InfoTip
-									label={copy.optionalModifier}
-									text={copy.optionalModifierHelp}
-								/>
-							</div>
-							<div className="modifier-row">
-								{MODIFIER_OPTIONS.map((option) => (
-									<button
-										key={option}
-										type="button"
-										className={`modifier-button ${modifier === option ? 'active' : ''}`}
-										aria-label={
-											option === 'flat'
-												? copy.modifierFlat
-												: option === 'sharp'
-													? copy.modifierSharp
-													: copy.modifierBase
-										}
-										onClick={() => setModifier(option)}
-									>
-										{option === 'flat' ? '♭' : option === 'sharp' ? '♯' : '♮'}
-									</button>
-								))}
-							</div>
-						</div>
-						<div className="points-header">
-							<strong>{copy.pointsTitle}</strong>
-						</div>
-						<div className="card-grid">
-							{NUMERIC_CARD_VALUES.map((value) => {
-								const active =
-									selectedSpecialVote === null && selectedNumericVote === value;
-								return (
-									<button
-										key={value}
-										type="button"
-										className={`vote-card ${active ? 'active' : ''}`}
-										disabled={!canSelectVoteCards}
-										onClick={() => {
-											setSelectedNumericVote(value);
-											setSelectedSpecialVote(null);
-										}}
-									>
-										<span>{value}</span>
-									</button>
-								);
-							})}
-						</div>
-						<div className="special-card-row">
-							{SPECIAL_CARD_VALUES.map((value) => {
-								const active = selectedSpecialVote === value;
-								return (
-									<button
-										key={value}
-										type="button"
-										className={`vote-card special-card ${active ? 'active' : ''}`}
-										disabled={!canSelectVoteCards}
-										onClick={() => {
-											setSelectedSpecialVote(value);
-											setSelectedNumericVote(null);
-										}}
-									>
-										{value}
-									</button>
-								);
-							})}
-						</div>
-						<button
-							className="vote-card clear-card"
-							type="button"
-							disabled={!canSubmitVote}
-							onClick={handleClearVote}
+						<RoomPanel
+							title={copy.voteCards}
+							badge={
+								<span className="badge muted-badge">
+									{self?.role === 'observer'
+										? copy.voteDisabled
+										: voteLabel(self?.vote ?? null, language)}
+								</span>
+							}
 						>
-							{copy.clearVote}
-						</button>
-					</RoomPanel>
+							<div className="modifier-section">
+								<div className="modifier-header">
+									<strong>{copy.optionalModifier}</strong>
+									<InfoTip
+										label={copy.optionalModifier}
+										text={copy.optionalModifierHelp}
+									/>
+								</div>
+								<div className="modifier-row">
+									{MODIFIER_OPTIONS.map((option) => (
+										<button
+											key={option}
+											type="button"
+											className={`modifier-button ${modifier === option ? 'active' : ''}`}
+											aria-label={
+												option === 'flat'
+													? copy.modifierFlat
+													: option === 'sharp'
+														? copy.modifierSharp
+														: copy.modifierBase
+											}
+											onClick={() => setModifier(option)}
+										>
+											{option === 'flat' ? '♭' : option === 'sharp' ? '♯' : '♮'}
+										</button>
+									))}
+								</div>
+							</div>
+							<div className="points-header">
+								<strong>{copy.pointsTitle}</strong>
+							</div>
+							<div className="card-grid">
+								{NUMERIC_CARD_VALUES.map((value) => {
+									const active =
+										selectedSpecialVote === null &&
+										selectedNumericVote === value;
+									return (
+										<button
+											key={value}
+											type="button"
+											className={`vote-card ${active ? 'active' : ''}`}
+											disabled={!canSelectVoteCards}
+											onClick={() => {
+												setSelectedNumericVote(value);
+												setSelectedSpecialVote(null);
+											}}
+										>
+											<span>{value}</span>
+										</button>
+									);
+								})}
+							</div>
+							<div className="special-card-row">
+								{SPECIAL_CARD_VALUES.map((value) => {
+									const active = selectedSpecialVote === value;
+									return (
+										<button
+											key={value}
+											type="button"
+											className={`vote-card special-card ${active ? 'active' : ''}`}
+											disabled={!canSelectVoteCards}
+											onClick={() => {
+												setSelectedSpecialVote(value);
+												setSelectedNumericVote(null);
+											}}
+										>
+											{value}
+										</button>
+									);
+								})}
+							</div>
+							<button
+								className="vote-card clear-card"
+								type="button"
+								disabled={!canSubmitVote}
+								onClick={handleClearVote}
+							>
+								{copy.clearVote}
+							</button>
+						</RoomPanel>
+					</div>
 				</aside>
 			</section>
 			{error ? <p className="error-text center-text">{error}</p> : null}

@@ -50,14 +50,22 @@ export function RoomPanel({
 						onClick={onToggleOpen}
 					>
 						<h3>{title}</h3>
-						<span className="panel-toggle-icon" aria-hidden="true">
-							{isOpen ? '▾' : '▸'}
-						</span>
 					</button>
 				) : (
 					<h3>{title}</h3>
 				)}
 				{actions ?? badge}
+				{collapsible ? (
+					<button
+						type="button"
+						className="panel-toggle-icon"
+						aria-expanded={isOpen}
+						aria-label={isOpen ? 'Collapse panel' : 'Expand panel'}
+						onClick={onToggleOpen}
+					>
+						{isOpen ? '▾' : '▸'}
+					</button>
+				) : null}
 			</div>
 			<div
 				className="panel-body-collapse"
