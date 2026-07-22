@@ -557,8 +557,9 @@ export function RoomScreen({
 							<circle cx="10.4" cy="8" r="0.9" />
 						</svg>
 					</span>
-					<span className="room-heading-label">{copy.roomLabel}</span>
-					<h2 className="room-title">{roomId}</h2>
+					<h2 className="room-title" aria-label={`${copy.roomId}: ${roomId}`}>
+						{roomId}
+					</h2>
 				</div>
 				<div className="topbar-actions">
 					<LanguageSelector
