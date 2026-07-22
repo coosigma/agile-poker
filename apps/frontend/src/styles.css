@@ -815,21 +815,21 @@ input:focus-visible {
 	min-width: 0;
 }
 
-.room-heading-label {
-	display: flex;
+.room-heading-icon-chip {
+	display: inline-flex;
 	align-items: center;
-	gap: 6px;
+	justify-content: center;
 	flex-shrink: 0;
+	width: 36px;
+	height: 36px;
+	border-radius: 11px;
+	background: rgba(246, 178, 83, 0.16);
 	color: var(--accent);
-	text-transform: uppercase;
-	letter-spacing: 0.12em;
-	font-size: 0.78rem;
-	font-weight: 600;
 }
 
 .room-heading-icon {
-	width: 15px;
-	height: 15px;
+	width: 19px;
+	height: 19px;
 	fill: none;
 	stroke: currentColor;
 	stroke-width: 1.4;

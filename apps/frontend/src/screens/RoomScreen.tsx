@@ -546,7 +546,11 @@ export function RoomScreen({
 		<div className="app-shell room-shell">
 			<section className="topbar">
 				<div className="room-heading">
-					<span className="room-heading-label">
+					<span
+						className="room-heading-icon-chip"
+						role="img"
+						aria-label={copy.roomLabel}
+					>
 						<svg
 							className="room-heading-icon"
 							viewBox="0 0 16 16"
@@ -556,7 +560,6 @@ export function RoomScreen({
 							<rect x="3" y="1.5" width="10" height="13" rx="1.4" />
 							<circle cx="10.4" cy="8" r="0.9" />
 						</svg>
-						{copy.roomLabel}
 					</span>
 					<h2 className="room-title">{roomId}</h2>
 				</div>
