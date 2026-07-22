@@ -59,7 +59,7 @@ export async function switchSelfRole(
 
 /** The vote-progress counter badge on the Room info panel, e.g. `1/2`. */
 export function votedCount(page: Page): Locator {
-	return page.locator('.room-info-panel .badge');
+	return page.locator('.room-info-panel .panel-header .badge');
 }
 
 /** A value on the revealed scoreboard, selected by its label. */

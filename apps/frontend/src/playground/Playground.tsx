@@ -499,10 +499,7 @@ export function Playground() {
 						onPointerMove={onResizeMove}
 						onPointerUp={endResize}
 						data-testid="viewport-resize-handle"
-						aria-label="Drag to resize the preview viewport"
-						role="slider"
-						aria-valuenow={viewportSize?.height ?? 0}
-						tabIndex={0}
+						aria-hidden="true"
 					/>
 				</div>
 			</section>

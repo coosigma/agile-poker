@@ -842,8 +842,10 @@ input:focus-visible {
 	gap: 8px;
 	min-width: 0;
 	padding: 0;
+	border: 0;
 	background: none;
 	color: inherit;
+	font: inherit;
 	text-align: left;
 	cursor: pointer;
 }
@@ -895,6 +897,19 @@ input:focus-visible {
 
 .panel-closed .panel-body-collapse {
 	margin-top: -1px;
+}
+
+/* While collapsed, the body's content is still in the DOM (its natural
+ * scrollHeight is needed for overflow measurement) but must not be
+ * focusable or exposed to assistive tech — otherwise keyboard/AT users can
+ * land on controls that are visually hidden by the grid-row collapse. The
+ * transition-delay matches the 0.2s grid-template-rows animation above, so
+ * content stays visible/interactive throughout the closing animation (e.g.
+ * a popover the user is mid-click on) and only becomes hidden once the
+ * panel has fully collapsed. */
+.panel-closed .panel-body-collapse .panel-body {
+	transition: visibility 0.2s;
+	visibility: hidden;
 }
 
 /* Accordion panels always take their natural (content) height, whether
@@ -1080,8 +1095,12 @@ input:focus-visible {
 	overflow-y: auto;
 }
 
+/* Falls back to a scrollbar (rather than clipping) for the rare case where
+ * `useFitScale` clamps to its `minScale` floor and the shrunk content still
+ * exceeds the available height. */
 .side-panel-fit {
-	overflow: hidden;
+	overflow-y: auto;
+	overflow-x: hidden;
 }
 
 .side-panel-fit-content {

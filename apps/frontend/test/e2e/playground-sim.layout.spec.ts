@@ -90,7 +90,9 @@ test('observer sees vote cards but cannot submit votes', async ({ page }) => {
 	await expect(voteCard).toBeEnabled();
 	await voteCard.click();
 	await expect(voteCard).toHaveClass(/active/);
-	await expect(page.locator('.room-info-panel .badge')).toHaveText('0/0');
+	await expect(
+		page.locator('.room-info-panel .panel-header .badge'),
+	).toHaveText('0/0');
 	await expect(
 		page.locator('.panel').filter({ hasText: 'Vote cards' }).locator('.badge'),
 	).toHaveText('Disabled');
