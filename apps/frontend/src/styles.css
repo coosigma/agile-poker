@@ -808,14 +808,55 @@ input:focus-visible {
 	box-shadow: none;
 }
 
-.topbar .eyebrow {
-	margin: 0;
+.room-heading {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	min-width: 0;
+}
+
+.room-heading-icon-chip {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	width: 36px;
+	height: 36px;
+	border-radius: 11px;
+	background: rgba(246, 178, 83, 0.16);
+	color: var(--accent);
+}
+
+.room-heading-icon {
+	width: 19px;
+	height: 19px;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 1.4;
+}
+
+.room-heading-icon circle {
+	fill: currentColor;
+	stroke: none;
+}
+
+.room-heading-label {
+	flex-shrink: 0;
+	color: var(--accent);
+	text-transform: uppercase;
+	letter-spacing: 0.14em;
+	font-size: 0.78rem;
+	font-weight: 700;
 }
 
 .room-title {
+	flex: 1 1 auto;
+	min-width: 0;
 	font-size: clamp(1.3rem, 2.5vw, 2rem);
 	line-height: 1.1;
-	transform: translateY(2px);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
 }
 
 .topbar-actions,
