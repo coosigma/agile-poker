@@ -57,12 +57,9 @@ export async function switchSelfRole(
 		.click();
 }
 
-/** The `Voted` counter on the room screen, e.g. `1/2`. */
+/** The vote-progress counter badge on the Room info panel, e.g. `1/2`. */
 export function votedCount(page: Page): Locator {
-	return page
-		.locator('.meta-list > div')
-		.filter({ hasText: 'Voted' })
-		.locator('strong');
+	return page.locator('.room-info-panel .panel-header .badge');
 }
 
 /** A value on the revealed scoreboard, selected by its label. */

@@ -79,8 +79,138 @@
 	width: 100%;
 }
 
-.playground-stage .room-shell {
-	height: calc(100vh - 3rem);
+/* Wraps `RoomScreen` so it can be pinned to a simulated viewport size,
+ * letting the short-screen accordion behavior be previewed without
+ * resizing the actual browser window. In "auto" mode the frame just fills
+ * the stage's content box, reproducing the original fixed sizing; the
+ * resize handle still works from there, snapshotting whatever size is
+ * currently on screen as the drag's starting point. */
+.playground-viewport-frame {
+	position: relative;
+	height: 100%;
+	min-height: 0;
+}
+
+.playground-viewport-frame.is-fixed {
+	margin: 0 auto;
+	border: 1px dashed rgba(148, 163, 184, 0.45);
+	border-radius: 16px;
+	overflow: hidden;
+}
+
+.playground-viewport-frame .room-shell {
+	height: 100%;
+}
+
+.playground-viewport-resize-handle {
+	position: absolute;
+	right: 4px;
+	bottom: 4px;
+	width: 18px;
+	height: 18px;
+	border-radius: 4px;
+	background: rgba(99, 102, 241, 0.55);
+	box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.4);
+	cursor: nwse-resize;
+	touch-action: none;
+	z-index: 5;
+}
+
+.playground-viewport-resize-handle::after {
+	content: '⤡';
+	position: absolute;
+	inset: 0;
+	display: grid;
+	place-items: center;
+	font-size: 0.7rem;
+	line-height: 1;
+	color: #fff;
+}
+
+.playground-viewport {
+	margin-top: 1.5rem;
+	padding-top: 1.25rem;
+	border-top: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.playground-viewport-title {
+	margin: 0 0 0.5rem;
+	font-size: 0.95rem;
+}
+
+.playground-viewport-presets {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.4rem;
+	margin-bottom: 0.75rem;
+}
+
+.playground-viewport-preset {
+	flex: 1 1 auto;
+	padding: 0.4rem 0.55rem;
+	border: 1px solid rgba(148, 163, 184, 0.45);
+	border-radius: 0.4rem;
+	background: transparent;
+	color: inherit;
+	font-size: 0.76rem;
+	cursor: pointer;
+}
+
+.playground-viewport-custom {
+	display: flex;
+	align-items: center;
+	gap: 0.4rem;
+	margin-bottom: 0.6rem;
+}
+
+.playground-viewport-field {
+	display: flex;
+	align-items: center;
+	gap: 0.3rem;
+	font-size: 0.76rem;
+	opacity: 0.85;
+}
+
+.playground-viewport-field input {
+	width: 4.5rem;
+	padding: 0.35rem 0.4rem;
+	border: 1px solid rgba(148, 163, 184, 0.45);
+	border-radius: 0.4rem;
+	background: rgba(15, 23, 42, 0.4);
+	color: inherit;
+	font-size: 0.82rem;
+}
+
+.playground-viewport-x {
+	opacity: 0.6;
+	font-size: 0.8rem;
+}
+
+.playground-viewport-apply {
+	padding: 0.4rem 0.6rem;
+	border: 1px solid #6366f1;
+	border-radius: 0.4rem;
+	background: rgba(99, 102, 241, 0.14);
+	color: inherit;
+	font-size: 0.78rem;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.playground-viewport-reset {
+	width: 100%;
+	padding: 0.4rem 0.6rem;
+	border: 1px solid rgba(148, 163, 184, 0.45);
+	border-radius: 0.4rem;
+	background: transparent;
+	color: inherit;
+	font-size: 0.78rem;
+	cursor: pointer;
+}
+
+.playground-viewport-reset:disabled {
+	opacity: 0.45;
+	cursor: not-allowed;
 }
 
 .playground-simulate {

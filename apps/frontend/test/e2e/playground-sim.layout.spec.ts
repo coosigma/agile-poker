@@ -1,4 +1,31 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
+
+// The "Room info" panel (which holds the self-role menu) may start
+// collapsed in short-viewport accordion mode; open it if needed before
+// interacting with content inside it.
+async function ensureRoomInfoOpen(page: Page) {
+	const roomInfoPanel = page.locator('.room-info-panel');
+	if (
+		await roomInfoPanel.evaluate((el) => el.classList.contains('panel-closed'))
+	) {
+		await roomInfoPanel.locator('.panel-header-toggle').click();
+	}
+}
+
+// Opening another panel (e.g. Room info, to switch role) can auto-close
+// "Voting controls" to keep the newly opened panel free of a scrollbar; open
+// it back up before interacting with host controls like Reveal/Done.
+async function ensureControlOpen(page: Page) {
+	const controlPanel = page
+		.locator('.panel')
+		.filter({ hasText: 'Voting controls' });
+	if (
+		(await controlPanel.count()) > 0 &&
+		(await controlPanel.evaluate((el) => el.classList.contains('panel-closed')))
+	) {
+		await controlPanel.locator('.panel-header-toggle').click();
+	}
+}
 
 test('playground can manually drive simulated player votes', async ({
 	page,
@@ -64,8 +91,8 @@ test('observer sees vote cards but cannot submit votes', async ({ page }) => {
 	await voteCard.click();
 	await expect(voteCard).toHaveClass(/active/);
 	await expect(
-		page.locator('.meta-list > div').filter({ hasText: 'Voted' }),
-	).toContainText('0/0');
+		page.locator('.room-info-panel .panel-header .badge'),
+	).toHaveText('0/0');
 	await expect(
 		page.locator('.panel').filter({ hasText: 'Vote cards' }).locator('.badge'),
 	).toHaveText('Disabled');
@@ -84,6 +111,7 @@ test('vote cards auto-submit selected point and modifier together', async ({
 	const startButton = page.locator('.control-pad-start');
 	await expect(startButton).toBeEnabled();
 	await startButton.evaluate((button: HTMLButtonElement) => button.click());
+	await ensureRoomInfoOpen(page);
 	await page.locator('.self-role-menu summary').click();
 	await page
 		.locator('.self-role-menu')
@@ -103,6 +131,7 @@ test('vote cards auto-submit selected point and modifier together', async ({
 		.click();
 	await expect(votePanel.locator('.badge')).toHaveText('5♯');
 
+	await ensureControlOpen(page);
 	const revealButton = page.locator('.control-pad-reveal');
 	await expect(revealButton).toBeEnabled();
 	await revealButton.evaluate((button: HTMLButtonElement) => button.click());
@@ -133,6 +162,7 @@ test('self role changes through the edit menu', async ({ page }) => {
 	await expect(
 		page.locator('.observer-bench .observer-card').filter({ hasText: 'You' }),
 	).toHaveCount(0);
+	await ensureRoomInfoOpen(page);
 	await page.locator('.self-role-menu summary').click();
 	await page
 		.locator('.self-role-menu')
@@ -295,6 +325,7 @@ test('playground shows a countdown before revealing votes', async ({
 	await expect(historySlide.locator('.ticket-history-self-vote')).toHaveCount(
 		0,
 	);
+	await ensureRoomInfoOpen(page);
 	await page.locator('.self-role-menu summary').click();
 	await page
 		.locator('.self-role-menu')
