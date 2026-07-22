@@ -562,11 +562,6 @@ export function RoomScreen({
 					</h2>
 				</div>
 				<div className="topbar-actions">
-					<LanguageSelector
-						language={language}
-						setLanguage={setLanguage}
-						compact
-					/>
 					<button
 						className="secondary-button"
 						onClick={async () => {
@@ -575,6 +570,11 @@ export function RoomScreen({
 					>
 						{copy.copyInvite}
 					</button>
+					<LanguageSelector
+						language={language}
+						setLanguage={setLanguage}
+						compact
+					/>
 				</div>
 			</section>
 			{connectionNotice ? (

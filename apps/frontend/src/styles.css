@@ -484,6 +484,26 @@ h2 {
 	display: none;
 }
 
+.topbar .language-menu-button {
+	width: 28px;
+	height: 28px;
+	border-radius: 9px;
+}
+
+.topbar .language-menu-button svg {
+	width: 18px;
+	height: 18px;
+}
+
+.topbar-actions .secondary-button {
+	display: inline-flex;
+	align-items: center;
+	height: 30px;
+	padding: 0 14px;
+	border-radius: 9px;
+	font-size: 0.85rem;
+}
+
 .language-menu {
 	position: relative;
 	display: inline-flex;
@@ -494,6 +514,7 @@ h2 {
 	place-items: center;
 	width: 40px;
 	height: 40px;
+	padding: 0;
 	border-radius: 10px;
 	border: 1px solid rgba(255, 255, 255, 0.08);
 	background: rgba(255, 255, 255, 0.06);
@@ -785,10 +806,10 @@ input:focus-visible {
 
 .room-shell {
 	height: 100vh;
-	padding: var(--space-y-sm) 0 var(--space-y-lg);
+	padding: 0 0 calc(var(--space-y-sm) * 0.7);
 	display: grid;
 	grid-template-rows: auto minmax(0, 1fr);
-	gap: var(--space-y-sm);
+	gap: calc(var(--space-y-sm) * 0.7);
 	overflow: hidden;
 }
 
@@ -796,14 +817,16 @@ input:focus-visible {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	gap: 16px;
-	padding: var(--space-y-lg) 18px;
-	margin: 4px 0 0;
+	gap: 14px;
+	margin-top: calc(var(--space-y-sm) * 0.7);
+	padding: calc(var(--space-y-lg) * 0.55) 18px;
+	border-radius: 16px;
 	backdrop-filter: none;
 	box-shadow: none;
 }
 
 .room-shell .panel {
+	border-radius: 16px;
 	backdrop-filter: none;
 	box-shadow: none;
 }
@@ -820,16 +843,16 @@ input:focus-visible {
 	align-items: center;
 	justify-content: center;
 	flex-shrink: 0;
-	width: 36px;
-	height: 36px;
-	border-radius: 11px;
+	width: 28px;
+	height: 28px;
+	border-radius: 9px;
 	background: rgba(246, 178, 83, 0.16);
 	color: var(--accent);
 }
 
 .room-heading-icon {
-	width: 19px;
-	height: 19px;
+	width: 15px;
+	height: 15px;
 	fill: none;
 	stroke: currentColor;
 	stroke-width: 1.4;
@@ -843,7 +866,7 @@ input:focus-visible {
 .room-title {
 	flex: 1 1 auto;
 	min-width: 0;
-	font-size: clamp(1.3rem, 2.5vw, 2rem);
+	font-size: clamp(0.95rem, 1.8vw, 1.45rem);
 	line-height: 1.1;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -855,7 +878,7 @@ input:focus-visible {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	gap: 12px;
+	gap: 10px;
 }
 
 .panel-header {
@@ -1330,7 +1353,7 @@ input:focus-visible {
 .observer-bench {
 	position: absolute;
 	right: 8%;
-	bottom: -4%;
+	bottom: 0;
 	left: 8%;
 	z-index: 1;
 	display: flex;
@@ -1745,6 +1768,7 @@ input:focus-visible {
 	}
 
 	.topbar {
+		padding: 14px 18px;
 		flex-direction: column;
 		align-items: flex-start;
 	}

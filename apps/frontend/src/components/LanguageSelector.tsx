@@ -86,7 +86,7 @@ function CompactLanguageSelector({
 					focusable="false"
 				>
 					<text
-						x="8"
+						x="8.8"
 						y="8"
 						fill="currentColor"
 						fontSize="11"
@@ -97,7 +97,7 @@ function CompactLanguageSelector({
 						文
 					</text>
 					<text
-						x="16"
+						x="16.8"
 						y="16"
 						fill="currentColor"
 						fontSize="11"
