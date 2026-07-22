@@ -545,7 +545,7 @@ export function RoomScreen({
 	return (
 		<div className="app-shell room-shell">
 			<section className="topbar">
-				<div className="room-heading">
+				<div className="room-heading" title={copy.roomNameTooltip}>
 					<span
 						className="room-heading-icon-chip"
 						role="img"
