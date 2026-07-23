@@ -28,6 +28,8 @@
 	--danger: #ff8d7d;
 	--violet: #b39ddb;
 	--violet-soft: rgba(179, 157, 219, 0.16);
+	--sand: #d3a875;
+	--sand-soft: rgba(211, 168, 117, 0.18);
 	/* Vertical spacing tiers for the y-axis only. Default values suit tall
 	 * viewports; shorter viewports step down through the media-query
 	 * buckets below so short screens reclaim layout height instead of
@@ -1070,8 +1072,8 @@ input:focus-visible {
 
 .stage-badge-noTopic,
 .stage-badge-ready {
-	background: rgba(255, 255, 255, 0.08);
-	color: #fff;
+	background: var(--sand);
+	color: #3c2914;
 }
 
 .stage-badge-voting {
