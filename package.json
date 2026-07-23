@@ -5,6 +5,7 @@
 	"type": "module",
 	"packageManager": "pnpm@10.34.4",
 	"scripts": {
+		"dev": "pnpm --parallel --filter @agile-poker/cloudflare --filter @agile-poker/frontend dev",
 		"dev:cf": "pnpm --filter @agile-poker/cloudflare dev",
 		"dev:local": "pnpm --filter @agile-poker/self-hosted dev",
 		"build": "pnpm --filter @agile-poker/app-core build && pnpm --filter @agile-poker/cloudflare build && pnpm --filter @agile-poker/self-hosted build && pnpm --filter @agile-poker/frontend build",

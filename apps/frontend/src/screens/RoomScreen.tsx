@@ -20,6 +20,7 @@ import {
 	roomShareUrl,
 	voteNumericValue,
 	voteLabel,
+	getVotingStateLabel,
 } from '../lib/poker';
 import {
 	MODIFIER_OPTIONS,
@@ -219,8 +220,7 @@ export function RoomScreen({
 	const canResetRound =
 		Boolean(state) &&
 		!hasUnsavedTicketChange &&
-		(state?.votingState === 'voting' || state?.votingState === 'revealed') &&
-		votedCount > 0;
+		(state?.votingState === 'voting' || state?.votingState === 'revealed');
 	const canRevealVotes = state?.votingState === 'voting' && votedCount > 0;
 	const canDoneTicket =
 		hasSavedTicket &&
@@ -238,6 +238,8 @@ export function RoomScreen({
 	const canSelectVoteCards =
 		state?.votingState === 'voting' || state?.votingState === 'countdown';
 	const canSubmitVote = isPlayer && canSelectVoteCards;
+	const votingStage = state?.votingState ?? 'noTopic';
+	const stageLabel = getVotingStateLabel(language, votingStage);
 	const selectedVote: VoteChoice | null = selectedSpecialVote
 		? { kind: 'special', value: selectedSpecialVote }
 		: selectedNumericVote !== null
@@ -748,6 +750,13 @@ export function RoomScreen({
 							expandLabel={copy.expandPanel}
 							headerRef={controlHeaderRef}
 							bodyRef={controlBodyRef}
+							badge={
+								<span
+									className={`badge stage-badge stage-badge-${votingStage}`}
+								>
+									{stageLabel}
+								</span>
+							}
 						>
 							<form
 								className="stack host-ticket-form"
@@ -868,6 +877,33 @@ export function RoomScreen({
 								</article>
 							</div>
 						) : null}
+						<div
+							className="voting-status-board"
+							aria-label={copy.roundStageLabel}
+						>
+							<div className="voting-status-card">
+								<div className="voting-status-row">
+									<span className="voting-status-row-label">
+										{copy.roundStageLabel}
+									</span>
+									<span
+										className={`voting-status-value stage-text-${votingStage}`}
+									>
+										{stageLabel.toUpperCase()}
+									</span>
+								</div>
+								<div className="voting-status-row">
+									<span className="voting-status-row-label">
+										{copy.statVotes}
+									</span>
+									<span className="voting-status-value voting-status-count">
+										{playerParticipants.length > 0
+											? `${votedCount}/${playerParticipants.length}`
+											: '–'}
+									</span>
+								</div>
+							</div>
+						</div>
 						<div className="table-frame" ref={tableFrameRef}>
 							<div className="ellipse-table">
 								<div className="table-center">

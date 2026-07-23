@@ -26,6 +26,8 @@
 	--success: #61d6ab;
 	--success-soft: rgba(97, 214, 171, 0.14);
 	--danger: #ff8d7d;
+	--violet: #b39ddb;
+	--violet-soft: rgba(179, 157, 219, 0.16);
 	/* Vertical spacing tiers for the y-axis only. Default values suit tall
 	 * viewports; shorter viewports step down through the media-query
 	 * buckets below so short screens reclaim layout height instead of
@@ -1060,6 +1062,38 @@ input:focus-visible {
 	color: #fff;
 }
 
+/* Voting-controls stage indicator: color communicates where the round is in
+ * its lifecycle (idle/ready -> voting -> revealing -> revealed -> completed). */
+.stage-badge {
+	white-space: nowrap;
+}
+
+.stage-badge-noTopic,
+.stage-badge-ready {
+	background: var(--danger);
+	color: #2a0f0a;
+}
+
+.stage-badge-voting {
+	background: var(--secondary);
+	color: #0f2436;
+}
+
+.stage-badge-countdown {
+	background: var(--accent-strong);
+	color: #121722;
+}
+
+.stage-badge-revealed {
+	background: var(--success);
+	color: #0b2a20;
+}
+
+.stage-badge-completed {
+	background: var(--violet);
+	color: #22163a;
+}
+
 .vote-cards-badge {
 	gap: 3px;
 	padding: 3px 7px;
@@ -1535,6 +1569,73 @@ input:focus-visible {
 	letter-spacing: 0.12em;
 	text-transform: uppercase;
 	transform: translateY(-50%);
+}
+
+.voting-status-board {
+	position: absolute;
+	top: 6%;
+	left: 5%;
+	z-index: 2;
+	pointer-events: none;
+}
+
+.voting-status-card {
+	display: grid;
+	gap: 7px;
+	width: 172px;
+	padding: 12px 14px;
+	border-radius: 12px;
+	background: rgba(11, 14, 22, 0.9);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+}
+
+.voting-status-row {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 10px;
+}
+
+.voting-status-row-label {
+	color: var(--text-muted);
+	font-size: 0.68rem;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	white-space: nowrap;
+}
+
+.voting-status-value {
+	font-size: 0.82rem;
+	font-weight: 700;
+	letter-spacing: 0.03em;
+	white-space: nowrap;
+}
+
+.voting-status-count {
+	color: #eef7ff;
+	font-variant-numeric: tabular-nums;
+}
+
+.stage-text-noTopic,
+.stage-text-ready {
+	color: var(--danger);
+}
+
+.stage-text-voting {
+	color: var(--secondary);
+}
+
+.stage-text-countdown {
+	color: var(--accent-strong);
+}
+
+.stage-text-revealed {
+	color: var(--success);
+}
+
+.stage-text-completed {
+	color: var(--violet);
 }
 
 .ellipse-table {
