@@ -897,7 +897,9 @@ export function RoomScreen({
 										{copy.statVotes}
 									</span>
 									<span className="voting-status-value voting-status-count">
-										{votedCount}/{playerParticipants.length}
+										{playerParticipants.length > 0
+											? `${votedCount}/${playerParticipants.length}`
+											: '–'}
 									</span>
 								</div>
 							</div>
