@@ -20,6 +20,7 @@ import {
 	roomShareUrl,
 	voteNumericValue,
 	voteLabel,
+	getVotingStateLabel,
 } from '../lib/poker';
 import {
 	MODIFIER_OPTIONS,
@@ -238,6 +239,8 @@ export function RoomScreen({
 	const canSelectVoteCards =
 		state?.votingState === 'voting' || state?.votingState === 'countdown';
 	const canSubmitVote = isPlayer && canSelectVoteCards;
+	const votingStage = state?.votingState ?? 'noTopic';
+	const stageLabel = getVotingStateLabel(language, votingStage);
 	const selectedVote: VoteChoice | null = selectedSpecialVote
 		? { kind: 'special', value: selectedSpecialVote }
 		: selectedNumericVote !== null
@@ -748,6 +751,13 @@ export function RoomScreen({
 							expandLabel={copy.expandPanel}
 							headerRef={controlHeaderRef}
 							bodyRef={controlBodyRef}
+							badge={
+								<span
+									className={`badge stage-badge stage-badge-${votingStage}`}
+								>
+									{stageLabel}
+								</span>
+							}
 						>
 							<form
 								className="stack host-ticket-form"

@@ -26,6 +26,8 @@
 	--success: #61d6ab;
 	--success-soft: rgba(97, 214, 171, 0.14);
 	--danger: #ff8d7d;
+	--violet: #b39ddb;
+	--violet-soft: rgba(179, 157, 219, 0.16);
 	/* Vertical spacing tiers for the y-axis only. Default values suit tall
 	 * viewports; shorter viewports step down through the media-query
 	 * buckets below so short screens reclaim layout height instead of
@@ -1058,6 +1060,38 @@ input:focus-visible {
 .muted-badge {
 	background: rgba(255, 255, 255, 0.08);
 	color: #fff;
+}
+
+/* Voting-controls stage indicator: color communicates where the round is in
+ * its lifecycle (idle/ready -> voting -> revealing -> revealed -> completed). */
+.stage-badge {
+	white-space: nowrap;
+}
+
+.stage-badge-noTopic,
+.stage-badge-ready {
+	background: rgba(255, 255, 255, 0.08);
+	color: #fff;
+}
+
+.stage-badge-voting {
+	background: var(--accent-strong);
+	color: #121722;
+}
+
+.stage-badge-countdown {
+	background: var(--danger);
+	color: #2a0f0a;
+}
+
+.stage-badge-revealed {
+	background: var(--success);
+	color: #0b2a20;
+}
+
+.stage-badge-completed {
+	background: var(--violet);
+	color: #22163a;
 }
 
 .vote-cards-badge {
