@@ -21,9 +21,14 @@ export function normalizeParticipantName(name: string): string {
 	return name.trim() || 'Anonymous';
 }
 
-export function createRoomState(roomId: string): RoomState {
+export function normalizeRoomName(roomName: string): string {
+	return roomName.trim().slice(0, 60);
+}
+
+export function createRoomState(roomId: string, roomName = ''): RoomState {
 	return {
 		roomId,
+		roomName: normalizeRoomName(roomName),
 		roomState: 'empty',
 		votingState: 'noTopic',
 		revealCountdownEndsAt: null,
@@ -95,6 +100,7 @@ export interface JoinRoomInput {
 	readonly name?: string;
 	readonly claimHost?: boolean;
 	readonly role?: ParticipantRole;
+	readonly roomName?: string;
 }
 
 /** Add a participant to the room and (re)assign the host. */
@@ -111,6 +117,17 @@ export function joinRoom(state: RoomState, input: JoinRoomInput): RoomState {
 
 	if (input.claimHost && !next.hostId) {
 		next = { ...next, hostId: participant.id };
+	}
+
+	// The room's display name is set once by whoever creates the room; later
+	// join attempts (or repeated create-intent claims) must not overwrite it.
+	// Normalize before checking so a whitespace-only payload can't slip past
+	// the "set once" guard and leave the name open for a later joiner.
+	const normalizedRoomName = input.roomName
+		? normalizeRoomName(input.roomName)
+		: '';
+	if (normalizedRoomName && !next.roomName) {
+		next = { ...next, roomName: normalizedRoomName };
 	}
 
 	return chooseHost(next);
@@ -360,6 +377,7 @@ export function applyClientMessage(
 				name: message.name,
 				claimHost: message.claimHost,
 				role: message.role,
+				roomName: message.roomName,
 			});
 		case 'set_name':
 			return setName(state, participantId, message.name);
@@ -398,6 +416,7 @@ export function toRoomStateView(state: RoomState): RoomStateView {
 
 	return {
 		roomId: state.roomId,
+		roomName: state.roomName,
 		roomState: state.roomState,
 		votingState: state.votingState,
 		revealCountdownEndsAt: state.revealCountdownEndsAt,

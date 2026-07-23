@@ -39,9 +39,12 @@ export function updateRoomInUrl(roomId: string): void {
 	window.history.pushState({}, '', url);
 }
 
-export function getRoomIntent(
-	roomId: string,
-): { roomId: string; type: RoomIntentType; role?: ParticipantRole } | null {
+export function getRoomIntent(roomId: string): {
+	roomId: string;
+	type: RoomIntentType;
+	role?: ParticipantRole;
+	roomName?: string;
+} | null {
 	if (!roomId) {
 		return null;
 	}
@@ -54,6 +57,7 @@ export function getRoomIntent(
 			roomId: string;
 			type: RoomIntentType;
 			role?: ParticipantRole;
+			roomName?: string;
 		};
 		return value.roomId === roomId ? value : null;
 	} catch {
@@ -65,10 +69,11 @@ export function setRoomIntent(
 	roomId: string,
 	type: RoomIntentType,
 	role?: ParticipantRole,
+	roomName?: string,
 ): void {
 	window.sessionStorage.setItem(
 		ROOM_INTENT_KEY,
-		JSON.stringify({ roomId, type, role }),
+		JSON.stringify({ roomId, type, role, roomName }),
 	);
 }
 

@@ -38,12 +38,13 @@ export async function forceEnglish(context: BrowserContext): Promise<void> {
 
 // --- room-screen locators ------------------------------------------------
 
-/** The `Role` badge on the room screen (`Host · Observer` / `Player`). */
+/**
+ * The role summary for the room screen (e.g. `Host · Observer` / `Player`),
+ * exposed as the accessible label of the role-icon badge group in the "Role
+ * settings" panel header.
+ */
 export function roleBadge(page: Page): Locator {
-	return page
-		.locator('.meta-list > div')
-		.filter({ hasText: 'Role' })
-		.locator('strong');
+	return page.locator('.room-info-panel .role-icon-badges');
 }
 
 export async function switchSelfRole(
@@ -55,11 +56,6 @@ export async function switchSelfRole(
 		.locator('.self-role-menu')
 		.getByRole('button', { name: role, exact: true })
 		.click();
-}
-
-/** The vote-progress counter badge on the Room info panel, e.g. `1/2`. */
-export function votedCount(page: Page): Locator {
-	return page.locator('.room-info-panel .panel-header .badge');
 }
 
 /** A value on the revealed scoreboard, selected by its label. */
@@ -161,11 +157,6 @@ export function newerTicketButton(page: Page): Locator {
 	});
 }
 
-/** The room's code shown in the room topbar heading, e.g. "ABC123". */
-export function roomCodeLabel(page: Page): Locator {
-	return page.locator('.topbar .room-title');
-}
-
 // --- flows ---------------------------------------------------------------
 
 /** Fill the display-name form and enter the room. */
@@ -181,9 +172,11 @@ async function enterName(page: Page, name: string): Promise<void> {
 export async function createRoomAsHost(
 	page: Page,
 	name: string,
+	roomName = 'Sprint planning',
 ): Promise<string> {
 	await page.goto('/');
 	await page.getByRole('button', { name: /Create room/i }).click();
+	await page.getByLabel('Room name').fill(roomName);
 	await enterName(page, name);
 	await page.waitForURL(/\?room=/);
 	const roomId = new URL(page.url()).searchParams.get('room');
@@ -223,13 +216,15 @@ export async function joinByInviteLink(
 	await page.waitForURL(/\?room=/);
 }
 
-/** Host reads the room code from the room topbar (strips the "Room " label). */
-export async function readRoomCode(page: Page): Promise<string> {
-	const label = (await roomCodeLabel(page).innerText()).trim();
-	// Label is "<Room> <CODE>"; the code is the last whitespace-separated token.
-	const code = label.split(/\s+/).pop() ?? '';
+/** Host reads their own room code by copying the invite link and parsing its `room` param. */
+export async function readRoomCode(
+	page: Page,
+	roomId: string,
+): Promise<string> {
+	const url = await copyInviteLink(page, roomId);
+	const code = new URL(url).searchParams.get('room');
 	if (!code) {
-		throw new Error(`could not read room code from label "${label}"`);
+		throw new Error(`could not read room code from invite url "${url}"`);
 	}
 	return code;
 }

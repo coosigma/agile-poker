@@ -17,8 +17,11 @@ export const ucTransferHost: UseCase = {
 	async run(ctx) {
 		await transferHostTo(ctx.host, ctx.state.teammateName);
 
-		await expect(roleBadge(ctx.host)).toHaveText('Player');
-		await expect(roleBadge(ctx.teammate)).toHaveText('Host · Player');
+		await expect(roleBadge(ctx.host)).toHaveAttribute('aria-label', 'Player');
+		await expect(roleBadge(ctx.teammate)).toHaveAttribute(
+			'aria-label',
+			'Host · Player',
+		);
 		await expect(startRoundButton(ctx.host)).toBeHidden();
 		await expect(revealButton(ctx.host)).toBeHidden();
 		await expect(startRoundButton(ctx.teammate)).toBeVisible();

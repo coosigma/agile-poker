@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-// The "Room info" panel (which holds the self-role menu) may start
+// The "Role settings" panel (which holds the self-role menu) may start
 // collapsed in short-viewport accordion mode; open it if needed before
 // interacting with content inside it.
 async function ensureRoomInfoOpen(page: Page) {
@@ -12,7 +12,7 @@ async function ensureRoomInfoOpen(page: Page) {
 	}
 }
 
-// Opening another panel (e.g. Room info, to switch role) can auto-close
+// Opening another panel (e.g. Role settings, to switch role) can auto-close
 // "Voting controls" to keep the newly opened panel free of a scrollbar; open
 // it back up before interacting with host controls like Reveal/Done.
 async function ensureControlOpen(page: Page) {
@@ -91,8 +91,8 @@ test('observer sees vote cards but cannot submit votes', async ({ page }) => {
 	await voteCard.click();
 	await expect(voteCard).toHaveClass(/active/);
 	await expect(
-		page.locator('.room-info-panel .panel-header .badge'),
-	).toHaveText('0/0');
+		page.locator('.room-info-panel .role-icon-badges'),
+	).toHaveAttribute('aria-label', 'Host · Observer');
 	await expect(
 		page.locator('.panel').filter({ hasText: 'Vote cards' }).locator('.badge'),
 	).toHaveText('Disabled');
@@ -156,7 +156,9 @@ test('self role changes through the edit menu', async ({ page }) => {
 	await page.goto('/playground.html');
 
 	const roleRow = page.locator('.meta-list > div').filter({ hasText: 'Role' });
-	await expect(roleRow).toContainText('Host · Observer');
+	const roleBadges = page.locator('.room-info-panel .role-icon-badges');
+	await expect(roleRow).toContainText('Observer');
+	await expect(roleBadges).toHaveAttribute('aria-label', 'Host · Observer');
 	await expect(page.locator('.host-board')).toContainText('Host');
 	await expect(page.locator('.host-card')).toHaveText('You');
 	await expect(
@@ -170,7 +172,8 @@ test('self role changes through the edit menu', async ({ page }) => {
 		.click();
 
 	await expect(page.locator('.self-role-menu')).not.toHaveAttribute('open', '');
-	await expect(roleRow).toContainText('Host · Player');
+	await expect(roleRow).toContainText('Player');
+	await expect(roleBadges).toHaveAttribute('aria-label', 'Host · Player');
 	await expect(page.locator('.host-board')).toHaveCount(0);
 	await expect(page.locator('.host-player-card')).toContainText('You · Host');
 	await expect(page.locator('.host-player-card')).toContainText('Not voted');

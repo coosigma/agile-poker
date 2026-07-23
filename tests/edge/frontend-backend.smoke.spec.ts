@@ -40,12 +40,15 @@ test.describe('edge: frontend ↔ backend', () => {
 		});
 
 		await test.step('join and receive room state over the socket', async () => {
+			await page.getByLabel('Room name').fill('Sprint planning');
 			await page.getByLabel('Display name').fill('Ada');
 			await page.getByRole('button', { name: 'Enter room' }).click();
 
-			await expect(page.getByText('Room info')).toBeVisible();
+			await expect(page.getByText('Role status')).toBeVisible();
 			await expect(page.getByText('Ada')).toBeVisible();
-			await expect(page.getByText('Host · Observer')).toBeVisible();
+			await expect(
+				page.locator('.room-info-panel .role-icon-badges'),
+			).toHaveAttribute('aria-label', 'Host · Observer');
 		});
 	});
 });

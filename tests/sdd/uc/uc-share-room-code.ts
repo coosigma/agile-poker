@@ -1,4 +1,4 @@
-import { expect, readRoomCode, roomCodeLabel } from '../utils/app';
+import { expect, readRoomCode } from '../utils/app';
 import type { UseCase } from './context';
 
 /**
@@ -14,8 +14,7 @@ export const ucShareRoomCode: UseCase = {
 		if (!ctx.state.roomId) {
 			throw new Error('shareRoomCode precondition: roomId is not set');
 		}
-		await expect(roomCodeLabel(ctx.host)).toContainText(ctx.state.roomId);
-		const code = await readRoomCode(ctx.host);
+		const code = await readRoomCode(ctx.host, ctx.state.roomId);
 		expect(code).toBe(ctx.state.roomId);
 	},
 };

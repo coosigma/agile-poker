@@ -13,6 +13,8 @@ interface NameEntryScreenProps {
 	readonly roleDraft: ParticipantRole;
 	readonly setRoleDraft: (value: ParticipantRole) => void;
 	readonly intentType: RoomIntentType | undefined;
+	readonly roomNameDraft: string;
+	readonly setRoomNameDraft: (value: string) => void;
 	readonly onSubmit: (event: FormEvent) => void;
 	readonly onBack: () => void;
 	readonly error: string;
@@ -27,6 +29,8 @@ export function NameEntryScreen({
 	roleDraft,
 	setRoleDraft,
 	intentType,
+	roomNameDraft,
+	setRoomNameDraft,
 	onSubmit,
 	onBack,
 	error,
@@ -88,6 +92,18 @@ export function NameEntryScreen({
 						: copy.enterNameLedeJoin}
 				</p>
 				<form className="stack" onSubmit={onSubmit}>
+					{intentType === 'create' ? (
+						<label>
+							{copy.roomNameLabel}
+							<input
+								value={roomNameDraft}
+								onChange={(event) => setRoomNameDraft(event.target.value)}
+								placeholder={copy.roomNamePlaceholder}
+								maxLength={60}
+								required
+							/>
+						</label>
+					) : null}
 					<label>
 						{copy.nickname}
 						<input

@@ -1,4 +1,9 @@
-import { clickStartRound, expect, numericCard, votedCount } from '../utils/app';
+import {
+	clickStartRound,
+	expect,
+	numericCard,
+	participantVoteValue,
+} from '../utils/app';
 import type { UseCase } from './context';
 
 /**
@@ -15,8 +20,18 @@ export const ucStartNewRound: UseCase = {
 		await clickStartRound(ctx.host);
 
 		// Votes are cleared and voting is open again in both browsers.
-		await expect(votedCount(ctx.host)).toHaveText('0/2');
-		await expect(votedCount(ctx.teammate)).toHaveText('0/2');
+		await expect(participantVoteValue(ctx.host, ctx.state.hostName)).toHaveText(
+			'Not voted',
+		);
+		await expect(
+			participantVoteValue(ctx.host, ctx.state.teammateName),
+		).toHaveText('Not voted');
+		await expect(
+			participantVoteValue(ctx.teammate, ctx.state.hostName),
+		).toHaveText('Not voted');
+		await expect(
+			participantVoteValue(ctx.teammate, ctx.state.teammateName),
+		).toHaveText('Not voted');
 		await expect(numericCard(ctx.host, ctx.state.hostVote)).toBeEnabled();
 		await expect(
 			numericCard(ctx.teammate, ctx.state.teammateVote),

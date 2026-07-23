@@ -492,6 +492,7 @@ export function Playground() {
 						setLanguage={setLanguage}
 						roomId={PLAYGROUND_ROOM_ID}
 						name={YOU_NAME}
+						onBackHome={() => {}}
 					/>
 					<div
 						className="playground-viewport-resize-handle"
