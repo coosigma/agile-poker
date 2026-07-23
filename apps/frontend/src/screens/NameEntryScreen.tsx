@@ -99,6 +99,8 @@ export function NameEntryScreen({
 								value={roomNameDraft}
 								onChange={(event) => setRoomNameDraft(event.target.value)}
 								placeholder={copy.roomNamePlaceholder}
+								maxLength={60}
+								required
 							/>
 						</label>
 					) : null}

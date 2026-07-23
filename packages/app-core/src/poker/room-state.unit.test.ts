@@ -11,6 +11,7 @@ import {
 	makeUniqueParticipantName,
 	normalizeParticipantName,
 	normalizeRoomId,
+	normalizeRoomName,
 	redactRoomStateViewForParticipant,
 	revealVotes,
 	setName,
@@ -38,6 +39,23 @@ describe('normalizeParticipantName', () => {
 	test('trims and falls back to Anonymous', () => {
 		expect(normalizeParticipantName('  Alice ')).toBe('Alice');
 		expect(normalizeParticipantName('   ')).toBe('Anonymous');
+	});
+});
+
+describe('normalizeRoomName', () => {
+	test('trims surrounding whitespace', () => {
+		expect(normalizeRoomName('  Sprint 42 planning  ')).toBe(
+			'Sprint 42 planning',
+		);
+	});
+
+	test('truncates to 60 characters', () => {
+		const long = 'x'.repeat(80);
+		expect(normalizeRoomName(long)).toBe('x'.repeat(60));
+	});
+
+	test('returns an empty string when given only whitespace', () => {
+		expect(normalizeRoomName('   ')).toBe('');
 	});
 });
 
@@ -86,6 +104,44 @@ describe('joinRoom', () => {
 			{ id: 'host', role: 'observer' },
 			{ id: 'guest', role: 'player' },
 		]);
+	});
+
+	test('sets and normalizes the room name from the first join that provides one', () => {
+		let state = room();
+		state = joinRoom(state, {
+			id: 'host',
+			name: 'Host',
+			roomName: '  Sprint 42 planning  ',
+		});
+		expect(state.roomName).toBe('Sprint 42 planning');
+	});
+
+	test('truncates an overly long room name to 60 characters', () => {
+		let state = room();
+		const long = 'x'.repeat(80);
+		state = joinRoom(state, { id: 'host', name: 'Host', roomName: long });
+		expect(state.roomName).toBe('x'.repeat(60));
+	});
+
+	test('does not overwrite an already-set room name on later joins', () => {
+		let state = room();
+		state = joinRoom(state, {
+			id: 'host',
+			name: 'Host',
+			roomName: 'Original Name',
+		});
+		state = joinRoom(state, {
+			id: 'guest',
+			name: 'Guest',
+			roomName: 'Attempted Override',
+		});
+		expect(state.roomName).toBe('Original Name');
+	});
+
+	test('leaves the room name empty when no join provides one', () => {
+		let state = room();
+		state = joinRoom(state, { id: 'host', name: 'Host' });
+		expect(state.roomName).toBe('');
 	});
 });
 
