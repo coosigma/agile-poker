@@ -1576,24 +1576,66 @@ input:focus-visible {
 	top: 6%;
 	left: 5%;
 	z-index: 2;
-	display: grid;
-	place-items: center;
-	width: 148px;
-	min-height: 78px;
-	padding: 10px;
 	pointer-events: none;
 }
 
-.voting-status-board-label {
-	position: absolute;
-	top: 0;
-	left: 14px;
-	padding: 0 6px;
+.voting-status-card {
+	display: grid;
+	gap: 7px;
+	width: 172px;
+	padding: 12px 14px;
+	border-radius: 12px;
+	background: rgba(11, 14, 22, 0.9);
+	border: 1px solid rgba(255, 255, 255, 0.08);
+	box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+}
+
+.voting-status-row {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 10px;
+}
+
+.voting-status-row-label {
 	color: var(--text-muted);
 	font-size: 0.68rem;
-	letter-spacing: 0.12em;
+	letter-spacing: 0.08em;
 	text-transform: uppercase;
-	transform: translateY(-50%);
+	white-space: nowrap;
+}
+
+.voting-status-value {
+	font-size: 0.82rem;
+	font-weight: 700;
+	letter-spacing: 0.03em;
+	white-space: nowrap;
+}
+
+.voting-status-count {
+	color: #eef7ff;
+	font-variant-numeric: tabular-nums;
+}
+
+.stage-text-noTopic,
+.stage-text-ready {
+	color: var(--danger);
+}
+
+.stage-text-voting {
+	color: var(--secondary);
+}
+
+.stage-text-countdown {
+	color: var(--accent-strong);
+}
+
+.stage-text-revealed {
+	color: var(--success);
+}
+
+.stage-text-completed {
+	color: var(--violet);
 }
 
 .ellipse-table {
@@ -1721,28 +1763,6 @@ input:focus-visible {
 	box-shadow:
 		0 14px 30px rgba(0, 0, 0, 0.28),
 		inset 0 0 0 1px rgba(246, 178, 83, 0.16);
-}
-
-.voting-status-card {
-	position: relative;
-	display: grid;
-	place-items: center;
-	gap: 5px;
-	width: 124px;
-	min-height: 60px;
-	padding: 16px 14px 10px;
-	border-color: rgba(255, 255, 255, 0.14);
-	transform: none;
-}
-
-.voting-status-stage {
-	padding: 3px 9px;
-	font-size: 0.66rem;
-}
-
-.voting-status-count {
-	font-size: 1rem;
-	font-variant-numeric: tabular-nums;
 }
 
 .seat-role-menu {
