@@ -104,6 +104,7 @@ export const STRINGS: Record<Language, Record<string, string>> = {
 		stageCountdown: 'Revealing',
 		stageRevealed: 'Revealed',
 		stageWaiting: 'Preparing',
+		votingStatusLabel: 'Status',
 	},
 	zh: {
 		appTitle: 'Scrum Poker 房间',
@@ -195,6 +196,7 @@ export const STRINGS: Record<Language, Record<string, string>> = {
 		stageCountdown: '即将翻牌',
 		stageRevealed: '已翻牌',
 		stageWaiting: '准备中',
+		votingStatusLabel: '状态',
 	},
 	ja: {
 		appTitle: 'スクラムポーカー ルーム',
@@ -291,6 +293,7 @@ export const STRINGS: Record<Language, Record<string, string>> = {
 		stageCountdown: '公開中',
 		stageRevealed: '公開済み',
 		stageWaiting: '準備中',
+		votingStatusLabel: '状況',
 	},
 };
 

@@ -878,6 +878,24 @@ export function RoomScreen({
 								</article>
 							</div>
 						) : null}
+						<div
+							className="voting-status-board"
+							aria-label={copy.votingStatusLabel}
+						>
+							<span className="voting-status-board-label">
+								{copy.votingStatusLabel}
+							</span>
+							<article className="seat-card voting-status-card">
+								<span
+									className={`badge stage-badge voting-status-stage stage-badge-${votingStage}`}
+								>
+									{stageLabel}
+								</span>
+								<strong className="voting-status-count">
+									{votedCount}/{playerParticipants.length}
+								</strong>
+							</article>
+						</div>
 						<div className="table-frame" ref={tableFrameRef}>
 							<div className="ellipse-table">
 								<div className="table-center">

@@ -1571,6 +1571,31 @@ input:focus-visible {
 	transform: translateY(-50%);
 }
 
+.voting-status-board {
+	position: absolute;
+	top: 6%;
+	left: 5%;
+	z-index: 2;
+	display: grid;
+	place-items: center;
+	width: 148px;
+	min-height: 78px;
+	padding: 10px;
+	pointer-events: none;
+}
+
+.voting-status-board-label {
+	position: absolute;
+	top: 0;
+	left: 14px;
+	padding: 0 6px;
+	color: var(--text-muted);
+	font-size: 0.68rem;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+	transform: translateY(-50%);
+}
+
 .ellipse-table {
 	position: absolute;
 	inset: 16% 10% 14%;
@@ -1696,6 +1721,28 @@ input:focus-visible {
 	box-shadow:
 		0 14px 30px rgba(0, 0, 0, 0.28),
 		inset 0 0 0 1px rgba(246, 178, 83, 0.16);
+}
+
+.voting-status-card {
+	position: relative;
+	display: grid;
+	place-items: center;
+	gap: 5px;
+	width: 124px;
+	min-height: 60px;
+	padding: 16px 14px 10px;
+	border-color: rgba(255, 255, 255, 0.14);
+	transform: none;
+}
+
+.voting-status-stage {
+	padding: 3px 9px;
+	font-size: 0.66rem;
+}
+
+.voting-status-count {
+	font-size: 1rem;
+	font-variant-numeric: tabular-nums;
 }
 
 .seat-role-menu {
