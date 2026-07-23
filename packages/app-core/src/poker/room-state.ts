@@ -121,8 +121,13 @@ export function joinRoom(state: RoomState, input: JoinRoomInput): RoomState {
 
 	// The room's display name is set once by whoever creates the room; later
 	// join attempts (or repeated create-intent claims) must not overwrite it.
-	if (input.roomName && !next.roomName) {
-		next = { ...next, roomName: normalizeRoomName(input.roomName) };
+	// Normalize before checking so a whitespace-only payload can't slip past
+	// the "set once" guard and leave the name open for a later joiner.
+	const normalizedRoomName = input.roomName
+		? normalizeRoomName(input.roomName)
+		: '';
+	if (normalizedRoomName && !next.roomName) {
+		next = { ...next, roomName: normalizedRoomName };
 	}
 
 	return chooseHost(next);

@@ -143,6 +143,22 @@ describe('joinRoom', () => {
 		state = joinRoom(state, { id: 'host', name: 'Host' });
 		expect(state.roomName).toBe('');
 	});
+
+	test('a whitespace-only room name does not block a later join from setting it', () => {
+		let state = room();
+		state = joinRoom(state, {
+			id: 'host',
+			name: 'Host',
+			roomName: '   ',
+		});
+		expect(state.roomName).toBe('');
+		state = joinRoom(state, {
+			id: 'guest',
+			name: 'Guest',
+			roomName: 'Real Name',
+		});
+		expect(state.roomName).toBe('Real Name');
+	});
 });
 
 describe('host-guarded transitions', () => {
