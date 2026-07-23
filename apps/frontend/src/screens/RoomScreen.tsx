@@ -220,8 +220,7 @@ export function RoomScreen({
 	const canResetRound =
 		Boolean(state) &&
 		!hasUnsavedTicketChange &&
-		(state?.votingState === 'voting' || state?.votingState === 'revealed') &&
-		votedCount > 0;
+		(state?.votingState === 'voting' || state?.votingState === 'revealed');
 	const canRevealVotes = state?.votingState === 'voting' && votedCount > 0;
 	const canDoneTicket =
 		hasSavedTicket &&
