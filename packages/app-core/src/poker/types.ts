@@ -68,6 +68,7 @@ export interface CompletedRound {
  */
 export interface RoomState {
 	readonly roomId: string;
+	readonly roomName: string;
 	readonly roomState: RoomMachineState;
 	readonly votingState: VotingMachineState;
 	readonly revealCountdownEndsAt: number | null;
@@ -91,6 +92,7 @@ export interface ParticipantView {
 /** Room shape sent to clients over the wire. */
 export interface RoomStateView {
 	readonly roomId: string;
+	readonly roomName: string;
 	readonly roomState: RoomMachineState;
 	readonly votingState: VotingMachineState;
 	readonly revealCountdownEndsAt: number | null;
@@ -106,6 +108,7 @@ export type ClientMessage =
 			readonly name?: string;
 			readonly claimHost?: boolean;
 			readonly role?: ParticipantRole;
+			readonly roomName?: string;
 	  }
 	| { readonly type: 'set_name'; readonly name?: string }
 	| {

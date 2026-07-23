@@ -71,6 +71,7 @@ export function useRoomSocket({
 					claimHost: intent?.type === 'create',
 					role:
 						intent?.role ?? (intent?.type === 'create' ? 'observer' : 'player'),
+					roomName: intent?.type === 'create' ? intent.roomName : undefined,
 				}),
 			);
 		});

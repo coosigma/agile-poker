@@ -16,7 +16,6 @@ import { useRoomSocket } from '../hooks/useRoomSocket';
 import { STRINGS, type Language } from '../lib/i18n';
 import { computeScoreboardStats } from '../lib/scoreboard';
 import {
-	getVotingStateLabel,
 	layoutSeats,
 	roomShareUrl,
 	voteNumericValue,
@@ -37,6 +36,7 @@ interface RoomScreenProps {
 	readonly setLanguage: (language: Language) => void;
 	readonly roomId: string;
 	readonly name: string;
+	readonly onBackHome: () => void;
 }
 
 export function RoomScreen({
@@ -44,6 +44,7 @@ export function RoomScreen({
 	setLanguage,
 	roomId,
 	name,
+	onBackHome,
 }: RoomScreenProps) {
 	const copy = STRINGS[language];
 	const { state, selfId, connectionNotice, error, sendMessage } = useRoomSocket(
@@ -115,6 +116,13 @@ export function RoomScreen({
 		state?.participants.find((participant) => participant.id === selfId) ??
 		null;
 	const isHost = Boolean(self?.isHost);
+	const selfRoleLabel =
+		self?.role === 'observer' ? copy.observerRole : copy.playerRole;
+	const roleSummaryLabel = [isHost ? copy.host : null, selfRoleLabel]
+		.filter(Boolean)
+		.join(' · ');
+	const { text: selfVoteText, modifierSymbol: selfVoteModifierSymbol } =
+		splitVoteDisplay(self?.vote);
 	// Left side-panel only: when its fully-expanded content would overflow the
 	// available height, panels become a collapsible accordion. "Voting
 	// controls" (host's primary Start/Reveal/Done actions) has the highest
@@ -191,17 +199,6 @@ export function RoomScreen({
 	const votedCount = playerParticipants.filter(
 		(participant) => participant.hasVoted,
 	).length;
-	// Color the vote-progress badge by stage: neutral before voting starts,
-	// in-progress while collecting votes, and success once revealed/done.
-	const votingState = state?.votingState ?? 'noTopic';
-	const voteProgressBadgeClass =
-		votingState === 'countdown' ||
-		votingState === 'revealed' ||
-		votingState === 'completed'
-			? 'badge-success'
-			: votingState === 'voting'
-				? 'badge-progress'
-				: 'muted-badge';
 	const savedTicketTitle = state?.ticketTitle ?? '';
 	const ticketDraftValue = ticketDraft.trim();
 	const hasUnsavedTicketChange = ticketDraftValue !== savedTicketTitle;
@@ -437,6 +434,11 @@ export function RoomScreen({
 			: null;
 	const shouldShowCurrentHistorySelfVote =
 		self?.role === 'player' && Boolean(currentHistory);
+	const hasHistorySelfVote = Boolean(currentHistorySelfVote?.vote);
+	const {
+		text: historySelfVoteText,
+		modifierSymbol: historySelfVoteModifierSymbol,
+	} = splitVoteDisplay(currentHistorySelfVote?.vote);
 
 	const ticketHistorySlides = (
 		<div className="ticket-history">
@@ -447,9 +449,18 @@ export function RoomScreen({
 						{shouldShowCurrentHistorySelfVote ? (
 							<span className="ticket-history-self-vote">
 								<span>{copy.yourVote}:</span>
-								<strong>
-									{voteLabel(currentHistorySelfVote?.vote ?? null, language)}
-								</strong>
+								{hasHistorySelfVote ? (
+									<strong className="ticket-history-self-vote-value">
+										<span>{historySelfVoteText}</span>
+										{historySelfVoteModifierSymbol ? (
+											<span className="ticket-history-self-vote-mod">
+												{historySelfVoteModifierSymbol}
+											</span>
+										) : null}
+									</strong>
+								) : (
+									<strong>{copy.voteNotCast}</strong>
+								)}
 							</span>
 						) : null}
 					</div>
@@ -542,11 +553,19 @@ export function RoomScreen({
 		</details>
 	);
 
+	const displayRoomName = state?.roomName || roomId;
+
 	return (
 		<div className="app-shell room-shell">
 			<section className="topbar">
-				<div className="room-heading" title={`${copy.roomId}: ${roomId}`}>
-					<span className="room-heading-icon-chip" aria-hidden="true">
+				<div className="room-heading">
+					<button
+						type="button"
+						className="room-heading-icon-chip"
+						title={copy.backHome}
+						aria-label={`${copy.backHome}: ${displayRoomName}`}
+						onClick={onBackHome}
+					>
 						<svg
 							className="room-heading-icon"
 							viewBox="0 0 16 16"
@@ -556,10 +575,10 @@ export function RoomScreen({
 							<rect x="3" y="1.5" width="10" height="13" rx="1.4" />
 							<circle cx="10.4" cy="8" r="0.9" />
 						</svg>
-					</span>
-					<h2 className="room-title" aria-label={`${copy.roomId}: ${roomId}`}>
-						{roomId}
-					</h2>
+					</button>
+					<div className="room-heading-text">
+						<h2 className="room-title">{displayRoomName}</h2>
+					</div>
 				</div>
 				<div className="topbar-actions">
 					<button
@@ -587,7 +606,7 @@ export function RoomScreen({
 					ref={leftSideRef}
 				>
 					<RoomPanel
-						title={copy.roomInfo}
+						title={copy.roleSettings}
 						className="room-info-panel"
 						collapsible={isAccordion}
 						open={isPanelOpen('roomInfo')}
@@ -597,32 +616,73 @@ export function RoomScreen({
 						headerRef={roomInfoHeaderRef}
 						bodyRef={roomInfoBodyRef}
 						badge={
-							<span className={`badge ${voteProgressBadgeClass}`}>
-								{votedCount}/{playerParticipants.length}
+							<span
+								className="role-icon-badges"
+								role="group"
+								aria-label={roleSummaryLabel}
+							>
+								{isHost ? (
+									<span
+										className="role-icon-badge role-icon-badge-host"
+										aria-hidden="true"
+										title={copy.host}
+									>
+										<svg
+											className="role-icon role-icon-host"
+											viewBox="0 0 16 16"
+											focusable="false"
+										>
+											<path d="M1.8 7 8 2.2 14.2 7" />
+											<path d="M2.8 6.4V14h10.4V6.4" />
+											<circle
+												className="role-icon-fill"
+												cx="8"
+												cy="9.4"
+												r="1.4"
+											/>
+											<path
+												className="role-icon-fill"
+												d="M5.8 14v-0.7c0-1.3 1-2 2.2-2s2.2.7 2.2 2V14"
+											/>
+										</svg>
+									</span>
+								) : null}
+								<span
+									className={`role-icon-badge ${
+										self?.role === 'observer'
+											? 'role-icon-badge-observer'
+											: 'role-icon-badge-player'
+									}`}
+									aria-hidden="true"
+									title={selfRoleLabel}
+								>
+									{self?.role === 'observer' ? (
+										<svg
+											className="role-icon role-icon-observer"
+											viewBox="0 0 16 16"
+											focusable="false"
+										>
+											<circle cx="4.7" cy="9" r="2.4" />
+											<circle cx="11.3" cy="9" r="2.4" />
+											<path d="M7.1 8.6h1.8M4.9 6.6 6 3.8h4l1.1 2.8" />
+										</svg>
+									) : (
+										<svg
+											className="role-icon role-icon-player"
+											viewBox="0 0 16 16"
+											focusable="false"
+										>
+											<circle cx="8" cy="5.2" r="2.3" />
+											<path d="M3.2 13c0-2.8 2.1-4.4 4.8-4.4s4.8 1.6 4.8 4.4" />
+										</svg>
+									)}
+								</span>
 							</span>
 						}
 					>
 						<div className="meta-list">
 							<div>
-								<span>{copy.currentVotingState}</span>
-								<strong>
-									{getVotingStateLabel(
-										language,
-										state?.votingState ?? 'noTopic',
-									)}
-								</strong>
-							</div>
-							<div>
-								<strong>
-									{[
-										isHost ? copy.host : null,
-										self?.role === 'observer'
-											? copy.observerRole
-											: copy.playerRole,
-									]
-										.filter(Boolean)
-										.join(' · ')}
-								</strong>
+								<strong>{selfRoleLabel}</strong>
 								{self ? (
 									<details className="self-role-menu">
 										<summary aria-label={copy.roleLabel}>
@@ -654,6 +714,26 @@ export function RoomScreen({
 								) : (
 									<span>{copy.myRole}</span>
 								)}
+							</div>
+							<div>
+								<div className="role-vote-status">
+									<strong>
+										{self?.hasVoted ? copy.votedYes : copy.voteNotCast}
+									</strong>
+									{self?.hasVoted ? (
+										<span className="badge role-vote-badge">
+											<span className="role-vote-badge-value">
+												{selfVoteText}
+											</span>
+											{selfVoteModifierSymbol ? (
+												<span className="role-vote-badge-mod">
+													{selfVoteModifierSymbol}
+												</span>
+											) : null}
+										</span>
+									) : null}
+								</div>
+								<span>{copy.myVoteStatus}</span>
 							</div>
 						</div>
 					</RoomPanel>
@@ -913,11 +993,22 @@ export function RoomScreen({
 						<RoomPanel
 							title={copy.voteCards}
 							badge={
-								<span className="badge muted-badge">
-									{self?.role === 'observer'
-										? copy.voteDisabled
-										: voteLabel(self?.vote ?? null, language)}
-								</span>
+								self?.role === 'observer' ? (
+									<span className="badge muted-badge">{copy.voteDisabled}</span>
+								) : self?.hasVoted ? (
+									<span className="badge muted-badge vote-cards-badge">
+										<span className="vote-cards-badge-value">
+											{selfVoteText}
+										</span>
+										{selfVoteModifierSymbol ? (
+											<span className="vote-cards-badge-mod">
+												{selfVoteModifierSymbol}
+											</span>
+										) : null}
+									</span>
+								) : (
+									<span className="badge muted-badge">{copy.voteNotCast}</span>
+								)
 							}
 						>
 							<div className="modifier-section">
@@ -1012,4 +1103,18 @@ function voteKey(vote: VoteChoice): string {
 	return vote.kind === 'special'
 		? `special:${vote.value}`
 		: `estimate:${vote.base}:${vote.modifier}`;
+}
+
+function splitVoteDisplay(vote: VoteChoice | null | undefined): {
+	text: string;
+	modifierSymbol: string | null;
+} {
+	const text = vote?.kind === 'special' ? vote.value : (vote?.base ?? '');
+	const modifierSymbol =
+		vote?.kind === 'estimate' && vote.modifier !== 'base'
+			? vote.modifier === 'sharp'
+				? '♯'
+				: '♭'
+			: null;
+	return { text, modifierSymbol };
 }

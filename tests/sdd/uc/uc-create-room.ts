@@ -16,8 +16,14 @@ export const ucCreateRoom: UseCase = {
 	async run(ctx) {
 		const roomId = await createRoomAsHost(ctx.host, ctx.state.hostName);
 		ctx.state.roomId = roomId;
-		await expect(roleBadge(ctx.host)).toHaveText('Host · Observer');
+		await expect(roleBadge(ctx.host)).toHaveAttribute(
+			'aria-label',
+			'Host · Observer',
+		);
 		await switchSelfRole(ctx.host, 'Player');
-		await expect(roleBadge(ctx.host)).toHaveText('Host · Player');
+		await expect(roleBadge(ctx.host)).toHaveAttribute(
+			'aria-label',
+			'Host · Player',
+		);
 	},
 };

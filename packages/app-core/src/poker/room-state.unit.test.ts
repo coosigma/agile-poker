@@ -389,6 +389,7 @@ describe('toRoomStateView', () => {
 		const view = toRoomStateView(state);
 		expect(view).toEqual({
 			roomId: 'ROOM1',
+			roomName: '',
 			roomState: 'active',
 			votingState: 'noTopic',
 			revealCountdownEndsAt: null,

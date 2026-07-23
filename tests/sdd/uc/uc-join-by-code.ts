@@ -29,7 +29,10 @@ export const ucJoinByCode: UseCase = {
 		expect(new URL(ctx.teammate.url()).searchParams.get('room')).toBe(
 			ctx.state.roomId,
 		);
-		await expect(roleBadge(ctx.teammate)).toHaveText('Player');
+		await expect(roleBadge(ctx.teammate)).toHaveAttribute(
+			'aria-label',
+			'Player',
+		);
 
 		// Host controls are not available to the teammate.
 		await expect(startRoundButton(ctx.teammate)).toBeHidden();

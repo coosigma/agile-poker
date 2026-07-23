@@ -41,6 +41,7 @@ export const ClientMessageSchema = Schema.Union(
 		name: Schema.optional(Schema.String),
 		claimHost: Schema.optional(Schema.Boolean),
 		role: Schema.optional(ParticipantRole),
+		roomName: Schema.optional(Schema.String),
 	}),
 	Schema.Struct({
 		type: Schema.Literal('set_name'),

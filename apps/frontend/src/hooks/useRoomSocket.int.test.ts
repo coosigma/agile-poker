@@ -20,6 +20,7 @@ const originalWebSocket = globalThis.WebSocket;
 function makeRoomState(overrides: Partial<RoomState> = {}): RoomState {
 	return {
 		roomId: 'ABC',
+		roomName: '',
 		roomState: 'active',
 		votingState: 'noTopic',
 		revealCountdownEndsAt: null,

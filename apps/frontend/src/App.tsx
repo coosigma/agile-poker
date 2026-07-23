@@ -39,6 +39,7 @@ export function App() {
 	const [nameDraft, setNameDraft] = useState(getInitialName);
 	const [roleDraft, setRoleDraft] = useState<ParticipantRole>('player');
 	const [joinRoomDraft, setJoinRoomDraft] = useState('');
+	const [roomNameDraft, setRoomNameDraft] = useState('');
 	const [language, setLanguage] = useState<Language>(getInitialLanguage);
 	const [error, setError] = useState('');
 
@@ -99,14 +100,25 @@ export function App() {
 		event.preventDefault();
 		const nextName = nameDraft.trim() || '匿名成员';
 		setName(nextName);
-		setError('');
 		if (roomId) {
 			const intent = getRoomIntent(roomId);
-			setRoomIntent(roomId, intent?.type ?? 'join', roleDraft);
+			const intentType = intent?.type ?? 'join';
+			if (intentType === 'create' && !roomNameDraft.trim()) {
+				setError(copy.roomNameRequiredError);
+				return;
+			}
+			setError('');
+			setRoomIntent(
+				roomId,
+				intentType,
+				roleDraft,
+				intentType === 'create' ? roomNameDraft.trim() : undefined,
+			);
 			updateRoomInUrl(roomId);
 			window.location.replace(roomShareUrl(roomId));
 			return;
 		}
+		setError('');
 		setScreen('room');
 	};
 
@@ -114,6 +126,7 @@ export function App() {
 		updateRoomInUrl('');
 		clearRoomIntent();
 		setRoomId('');
+		setRoomNameDraft('');
 		setError('');
 		setScreen('home');
 	};
@@ -155,6 +168,8 @@ export function App() {
 				roleDraft={roleDraft}
 				setRoleDraft={setRoleDraft}
 				intentType={getRoomIntent(roomId)?.type}
+				roomNameDraft={roomNameDraft}
+				setRoomNameDraft={setRoomNameDraft}
 				onSubmit={handleNameEntry}
 				onBack={handleBackHome}
 				error={error}
@@ -168,6 +183,7 @@ export function App() {
 			setLanguage={setLanguage}
 			roomId={roomId}
 			name={name}
+			onBackHome={handleBackHome}
 		/>
 	);
 }
