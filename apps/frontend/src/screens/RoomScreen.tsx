@@ -599,7 +599,7 @@ export function RoomScreen({
 				</div>
 			</section>
 			{connectionNotice ? (
-				<p className="error-text center-text">{connectionNotice}</p>
+				<p className="error-text center-text room-notice">{connectionNotice}</p>
 			) : null}
 
 			<section className="room-layout">
@@ -867,40 +867,44 @@ export function RoomScreen({
 
 				<main className="table-zone">
 					<div className="table-stack">
-						{hostParticipant && !hostIsPlayer ? (
-							<div className="host-board" aria-label={copy.participantHost}>
-								<span className="host-board-label">{copy.participantHost}</span>
-								<article
-									className={`seat-card host-card ${hostParticipant.id === selfId ? 'self' : ''}`}
-								>
-									<span className="seat-name">{hostParticipant.name}</span>
-								</article>
-							</div>
-						) : null}
-						<div
-							className="voting-status-board"
-							aria-label={copy.roundStageLabel}
-						>
-							<div className="voting-status-card">
-								<div className="voting-status-row">
-									<span className="voting-status-row-label">
-										{copy.roundStageLabel}
+						<div className="table-top-zone">
+							{hostParticipant && !hostIsPlayer ? (
+								<div className="host-board" aria-label={copy.participantHost}>
+									<span className="host-board-label">
+										{copy.participantHost}
 									</span>
-									<span
-										className={`voting-status-value stage-text-${votingStage}`}
+									<article
+										className={`seat-card host-card ${hostParticipant.id === selfId ? 'self' : ''}`}
 									>
-										{stageLabel.toUpperCase()}
-									</span>
+										<span className="seat-name">{hostParticipant.name}</span>
+									</article>
 								</div>
-								<div className="voting-status-row">
-									<span className="voting-status-row-label">
-										{copy.statVotes}
-									</span>
-									<span className="voting-status-value voting-status-count">
-										{playerParticipants.length > 0
-											? `${votedCount}/${playerParticipants.length}`
-											: '–'}
-									</span>
+							) : null}
+							<div
+								className="voting-status-board"
+								aria-label={copy.roundStageLabel}
+							>
+								<div className="voting-status-card">
+									<div className="voting-status-row">
+										<span className="voting-status-row-label">
+											{copy.roundStageLabel}
+										</span>
+										<span
+											className={`voting-status-value stage-text-${votingStage}`}
+										>
+											{stageLabel.toUpperCase()}
+										</span>
+									</div>
+									<div className="voting-status-row">
+										<span className="voting-status-row-label">
+											{copy.statVotes}
+										</span>
+										<span className="voting-status-value voting-status-count">
+											{playerParticipants.length > 0
+												? `${votedCount}/${playerParticipants.length}`
+												: '–'}
+										</span>
+									</div>
 								</div>
 							</div>
 						</div>
@@ -1030,7 +1034,9 @@ export function RoomScreen({
 							title={copy.voteCards}
 							badge={
 								self?.role === 'observer' ? (
-									<span className="badge muted-badge">{copy.voteDisabled}</span>
+									<span className="badge muted-badge vote-status-disabled">
+										{copy.voteDisabled}
+									</span>
 								) : self?.hasVoted ? (
 									<span className="badge muted-badge vote-cards-badge">
 										<span className="vote-cards-badge-value">
@@ -1130,7 +1136,9 @@ export function RoomScreen({
 					</div>
 				</aside>
 			</section>
-			{error ? <p className="error-text center-text">{error}</p> : null}
+			{error ? (
+				<p className="error-text center-text room-footer-notice">{error}</p>
+			) : null}
 		</div>
 	);
 }
