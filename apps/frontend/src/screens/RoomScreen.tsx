@@ -599,7 +599,7 @@ export function RoomScreen({
 				</div>
 			</section>
 			{connectionNotice ? (
-				<p className="error-text center-text">{connectionNotice}</p>
+				<p className="error-text center-text room-notice">{connectionNotice}</p>
 			) : null}
 
 			<section className="room-layout">
@@ -866,7 +866,7 @@ export function RoomScreen({
 				</aside>
 
 				<main className="table-zone">
-					<div className="table-stack">
+					<div className="table-top-zone">
 						{hostParticipant && !hostIsPlayer ? (
 							<div className="host-board" aria-label={copy.participantHost}>
 								<span className="host-board-label">{copy.participantHost}</span>
@@ -904,102 +904,98 @@ export function RoomScreen({
 								</div>
 							</div>
 						</div>
-						<div className="table-frame" ref={tableFrameRef}>
-							<div className="ellipse-table">
-								<div className="table-center">
-									<p>{copy.revealTable}</p>
-									<strong
-										style={{
-											fontSize: `clamp(1rem, ${Math.min(2.2, 40 / Math.max((state?.ticketTitle || copy.waitingTopic).length, 1))}rem, 2.2rem)`,
-										}}
-									>
-										{state?.ticketTitle || copy.waitingTopic}
-									</strong>
-									<div
-										className={`scoreboard ${stats.revealed ? 'revealed' : 'pending'}`}
-									>
-										<div className="scoreboard-cell">
-											<span className="scoreboard-value">
-												{stats.totalVotes}
-											</span>
-											<span className="scoreboard-label">{copy.statVotes}</span>
-										</div>
-										<div className="scoreboard-cell">
-											<span className="scoreboard-value">{stats.mean}</span>
-											<span className="scoreboard-label">{copy.statMean}</span>
-										</div>
-										<div className="scoreboard-cell">
-											<span className="scoreboard-value">{stats.stdDev}</span>
-											<span className="scoreboard-label">
-												{copy.statStdDev}
-											</span>
-										</div>
+					</div>
+					<div className="table-frame" ref={tableFrameRef}>
+						<div className="ellipse-table">
+							<div className="table-center">
+								<p>{copy.revealTable}</p>
+								<strong
+									style={{
+										fontSize: `clamp(1rem, ${Math.min(2.2, 40 / Math.max((state?.ticketTitle || copy.waitingTopic).length, 1))}rem, 2.2rem)`,
+									}}
+								>
+									{state?.ticketTitle || copy.waitingTopic}
+								</strong>
+								<div
+									className={`scoreboard ${stats.revealed ? 'revealed' : 'pending'}`}
+								>
+									<div className="scoreboard-cell">
+										<span className="scoreboard-value">{stats.totalVotes}</span>
+										<span className="scoreboard-label">{copy.statVotes}</span>
+									</div>
+									<div className="scoreboard-cell">
+										<span className="scoreboard-value">{stats.mean}</span>
+										<span className="scoreboard-label">{copy.statMean}</span>
+									</div>
+									<div className="scoreboard-cell">
+										<span className="scoreboard-value">{stats.stdDev}</span>
+										<span className="scoreboard-label">{copy.statStdDev}</span>
 									</div>
 								</div>
 							</div>
-							{hostParticipant && hostSeat ? (
-								<article
-									className={`seat-card host-player-card ${hostParticipant.id === selfId ? 'self' : ''}`}
-									style={
-										{
-											left: `${hostSeat.left}%`,
-											top: `${hostSeat.top}%`,
-											'--seat-scale': hostSeat.scale,
-										} as CSSProperties
-									}
-								>
-									<span className="seat-name">
-										{hostParticipant.name} · {copy.participantHost}
-									</span>
-									<strong>
-										{state?.votingState === 'revealed'
-											? voteLabel(hostParticipant.vote, language)
-											: hostParticipant.hasVoted
-												? copy.votedYes
-												: copy.voteNotCast}
-									</strong>
-								</article>
-							) : null}
-							{seats.map(({ participant, left, top, scale }) => (
-								<article
-									key={participant.id}
-									className={`seat-card ${participant.id === selfId ? 'self' : ''} ${scale < 0.7 ? 'compact' : ''}`}
-									style={
-										{
-											left: `${left}%`,
-											top: `${top}%`,
-											'--seat-scale': scale,
-										} as CSSProperties
-									}
-								>
-									<span className="seat-name">{participant.name}</span>
-									{isHost && participant.id !== selfId
-										? roleMenu(participant.id, 'observer', copy.makeObserver)
-										: null}
-									<strong>
-										{state?.votingState === 'revealed'
-											? voteLabel(participant.vote, language)
-											: participant.hasVoted
-												? copy.votedYes
-												: copy.voteNotCast}
-									</strong>
-								</article>
-							))}
 						</div>
-						<div className="observer-bench" aria-label={copy.observers}>
-							<span className="observer-bench-label">{copy.observers}</span>
-							{visibleObserverParticipants.map((participant) => (
-								<article
-									key={participant.id}
-									className={`seat-card observer-card ${participant.id === selfId ? 'self' : ''}`}
-								>
-									<span className="seat-name">{participant.name}</span>
-									{isHost && participant.id !== selfId
-										? roleMenu(participant.id, 'player', copy.makePlayer)
-										: null}
-								</article>
-							))}
-						</div>
+						{hostParticipant && hostSeat ? (
+							<article
+								className={`seat-card host-player-card ${hostParticipant.id === selfId ? 'self' : ''}`}
+								style={
+									{
+										left: `${hostSeat.left}%`,
+										top: `${hostSeat.top}%`,
+										'--seat-scale': hostSeat.scale,
+									} as CSSProperties
+								}
+							>
+								<span className="seat-name">
+									{hostParticipant.name} · {copy.participantHost}
+								</span>
+								<strong>
+									{state?.votingState === 'revealed'
+										? voteLabel(hostParticipant.vote, language)
+										: hostParticipant.hasVoted
+											? copy.votedYes
+											: copy.voteNotCast}
+								</strong>
+							</article>
+						) : null}
+						{seats.map(({ participant, left, top, scale }) => (
+							<article
+								key={participant.id}
+								className={`seat-card ${participant.id === selfId ? 'self' : ''} ${scale < 0.7 ? 'compact' : ''}`}
+								style={
+									{
+										left: `${left}%`,
+										top: `${top}%`,
+										'--seat-scale': scale,
+									} as CSSProperties
+								}
+							>
+								<span className="seat-name">{participant.name}</span>
+								{isHost && participant.id !== selfId
+									? roleMenu(participant.id, 'observer', copy.makeObserver)
+									: null}
+								<strong>
+									{state?.votingState === 'revealed'
+										? voteLabel(participant.vote, language)
+										: participant.hasVoted
+											? copy.votedYes
+											: copy.voteNotCast}
+								</strong>
+							</article>
+						))}
+					</div>
+					<div className="observer-bench" aria-label={copy.observers}>
+						<span className="observer-bench-label">{copy.observers}</span>
+						{visibleObserverParticipants.map((participant) => (
+							<article
+								key={participant.id}
+								className={`seat-card observer-card ${participant.id === selfId ? 'self' : ''}`}
+							>
+								<span className="seat-name">{participant.name}</span>
+								{isHost && participant.id !== selfId
+									? roleMenu(participant.id, 'player', copy.makePlayer)
+									: null}
+							</article>
+						))}
 					</div>
 					{revealCountdownSeconds !== null ? (
 						<div
@@ -1030,7 +1026,9 @@ export function RoomScreen({
 							title={copy.voteCards}
 							badge={
 								self?.role === 'observer' ? (
-									<span className="badge muted-badge">{copy.voteDisabled}</span>
+									<span className="badge muted-badge vote-status-disabled">
+										{copy.voteDisabled}
+									</span>
 								) : self?.hasVoted ? (
 									<span className="badge muted-badge vote-cards-badge">
 										<span className="vote-cards-badge-value">
@@ -1130,7 +1128,9 @@ export function RoomScreen({
 					</div>
 				</aside>
 			</section>
-			{error ? <p className="error-text center-text">{error}</p> : null}
+			{error ? (
+				<p className="error-text center-text room-footer-notice">{error}</p>
+			) : null}
 		</div>
 	);
 }

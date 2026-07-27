@@ -36,6 +36,13 @@
 	--space-y-sm: 12px;
 	--space-y-md: 16px;
 	--space-y-lg: 24px;
+	/* Shared floor for the host-board / voting-status-board content above
+	 * the table. Both boards are absolutely positioned inside
+	 * .table-top-zone so it can't auto-size to their content — keep this
+	 * in sync with .host-board's min-height and give .table-top-zone a
+	 * real buffer above it (see .table-top-zone) instead of an
+	 * unexplained magic number. */
+	--table-top-board-min-height: 78px;
 }
 
 @media (max-height: 800px) {
@@ -810,9 +817,27 @@ input:focus-visible {
 	height: 100vh;
 	padding: 0 0 calc(var(--space-y-sm) * 0.7);
 	display: grid;
-	grid-template-rows: auto minmax(0, 1fr);
-	gap: calc(var(--space-y-sm) * 0.7);
+	grid-template-columns: 280px minmax(0, 1fr) 300px;
+	grid-template-rows: auto auto minmax(0, 1fr) auto;
+	grid-template-areas:
+		'topbar topbar topbar'
+		'notice notice notice'
+		'left center right'
+		'footer footer footer';
+	gap: calc(var(--space-y-sm) * 0.7) 12px;
 	overflow: hidden;
+}
+
+.room-shell > .topbar {
+	grid-area: topbar;
+}
+
+.room-notice {
+	grid-area: notice;
+}
+
+.room-footer-notice {
+	grid-area: footer;
 }
 
 .topbar {
@@ -1058,8 +1083,17 @@ input:focus-visible {
 }
 
 .muted-badge {
-	background: rgba(255, 255, 255, 0.08);
-	color: #fff;
+	gap: 3px;
+	padding: 3px 7px;
+	border: 1px solid rgba(255, 255, 255, 0.22);
+	border-radius: 4px;
+	background: rgba(0, 0, 0, 0.28);
+	box-shadow: none;
+	color: #eef7ff;
+}
+
+.vote-status-disabled {
+	color: rgba(238, 247, 255, 0.45);
 }
 
 /* Voting-controls stage indicator: color communicates where the round is in
@@ -1095,11 +1129,6 @@ input:focus-visible {
 }
 
 .vote-cards-badge {
-	gap: 3px;
-	padding: 3px 7px;
-	border: 1px solid rgba(255, 255, 255, 0.22);
-	border-radius: 4px;
-	background: rgba(0, 0, 0, 0.28);
 	font-variant-numeric: tabular-nums;
 }
 
@@ -1243,14 +1272,11 @@ input:focus-visible {
 }
 
 .room-layout {
-	display: grid;
-	grid-template-columns: 280px minmax(0, 1fr) 300px;
-	gap: 12px;
-	align-items: stretch;
-	min-height: 0;
+	display: contents;
 }
 
 .side-panel {
+	grid-area: left;
 	display: flex;
 	flex-direction: column;
 	gap: var(--space-y-sm);
@@ -1258,6 +1284,23 @@ input:focus-visible {
 	align-items: stretch;
 	justify-content: flex-start;
 	overflow-y: auto;
+}
+
+.side-panel.side-panel-fit {
+	grid-area: right;
+}
+
+.table-zone {
+	grid-area: center;
+	position: relative;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-y-sm);
+	width: 100%;
+	height: min(100%, 900px);
+	max-height: 100%;
+	align-self: center;
 }
 
 /* Falls back to a scrollbar (rather than clipping) for the rare case where
@@ -1495,36 +1538,29 @@ input:focus-visible {
 	white-space: nowrap;
 }
 
-.table-zone {
+.table-top-zone {
 	position: relative;
-	min-height: 0;
-	display: grid;
-	place-items: center;
-}
-
-.table-stack {
-	position: relative;
-	width: 100%;
-	height: min(100%, 900px);
-	max-height: 100%;
-	transform: translateY(-18px);
+	flex: 0 0 auto;
+	/* Buffer above --table-top-board-min-height so modest board growth
+	 * (longer names, a taller locale's labels) doesn't overlap
+	 * .table-frame below — the boards are absolutely positioned and
+	 * can't grow this element themselves. */
+	min-height: calc(var(--table-top-board-min-height) + 20px);
 }
 
 .table-frame {
 	position: relative;
+	flex: 1 1 auto;
 	min-height: 0;
-	height: 100%;
 	overflow: hidden;
 }
 
 .observer-bench {
-	position: absolute;
-	right: 8%;
-	bottom: 0;
-	left: 8%;
-	z-index: 1;
+	position: relative;
+	flex: 0 0 auto;
 	display: flex;
 	flex-wrap: wrap;
+	justify-content: center;
 	gap: 8px;
 	min-height: 78px;
 	padding: 10px;
@@ -1534,27 +1570,24 @@ input:focus-visible {
 }
 
 .observer-bench-label {
-	position: absolute;
-	top: 50%;
-	left: 0;
+	width: 100%;
 	padding: 0 6px;
 	color: var(--text-muted);
 	font-size: 0.68rem;
 	letter-spacing: 0.12em;
+	text-align: center;
 	text-transform: uppercase;
-	transform: translate(calc(-50% - 2ch), -50%) rotate(-90deg);
-	transform-origin: center;
 }
 
 .host-board {
 	position: absolute;
-	top: 6%;
+	top: 0;
 	right: 5%;
 	z-index: 2;
 	display: grid;
 	place-items: center;
 	width: 148px;
-	min-height: 78px;
+	min-height: var(--table-top-board-min-height);
 	padding: 10px;
 	pointer-events: none;
 }
@@ -1573,7 +1606,7 @@ input:focus-visible {
 
 .voting-status-board {
 	position: absolute;
-	top: 6%;
+	top: 0;
 	left: 5%;
 	z-index: 2;
 	pointer-events: none;
@@ -1976,12 +2009,19 @@ input:focus-visible {
 		overflow: auto;
 	}
 
-	.room-layout {
+	.room-shell {
+		height: auto;
+		min-height: 100vh;
+		overflow: visible;
 		grid-template-columns: 1fr;
-	}
-
-	.table-zone {
-		order: -1;
+		grid-template-rows: auto auto auto auto auto auto;
+		grid-template-areas:
+			'topbar'
+			'notice'
+			'center'
+			'left'
+			'right'
+			'footer';
 	}
 
 	.table-frame {
