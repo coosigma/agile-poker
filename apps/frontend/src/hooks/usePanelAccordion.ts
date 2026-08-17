@@ -69,6 +69,7 @@ export function usePanelAccordion(
 	const manualOverrideRef = useRef(false);
 	const isAccordionRef = useRef(false);
 	const compositionKeyRef = useRef<string | null>(null);
+	const protectedPanelIdRef = useRef<string | null>(null);
 
 	// Latest measurements, kept up to date by recompute() so togglePanel can
 	// synchronously decide what still fits without waiting for a re-render.
@@ -159,6 +160,7 @@ export function usePanelAccordion(
 		const compositionChanged = compositionKeyRef.current !== compositionKey;
 		if (!willBeAccordion || enteringAccordion || compositionChanged) {
 			manualOverrideRef.current = false;
+			protectedPanelIdRef.current = null;
 		}
 		compositionKeyRef.current = compositionKey;
 		isAccordionRef.current = willBeAccordion;
@@ -201,9 +203,14 @@ export function usePanelAccordion(
 			setOpenPanelIds(openSet);
 		} else {
 			// Manual selection is already in place; only ever shed panels (by
-			// closePriority) if it stops fitting — never add any back.
+			// closePriority) if it stops fitting — never add any back. Keep the
+			// most recently opened panel protected across ResizeObserver
+			// callbacks so opening it cannot immediately close it again.
 			setOpenPanelIds((previous) => {
-				const fitted = shrinkToFit(previous);
+				const fitted = shrinkToFit(
+					previous,
+					protectedPanelIdRef.current ?? undefined,
+				);
 				return fitted.length === previous.length &&
 					fitted.every((id, index) => id === previous[index])
 					? previous
@@ -248,8 +255,12 @@ export function usePanelAccordion(
 			manualOverrideRef.current = true;
 			setOpenPanelIds((previous) => {
 				if (previous.includes(id)) {
+					if (protectedPanelIdRef.current === id) {
+						protectedPanelIdRef.current = null;
+					}
 					return previous.filter((existingId) => existingId !== id);
 				}
+				protectedPanelIdRef.current = id;
 				return shrinkToFit([...previous, id], id);
 			});
 		},
