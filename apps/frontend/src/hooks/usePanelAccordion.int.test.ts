@@ -54,6 +54,8 @@ afterEach(() => {
 });
 
 describe('usePanelAccordion', () => {
+	// Integration-level regression: React state, DOM measurements, and the
+	// ResizeObserver boundary collaborate to reproduce the viewport behaviour.
 	test('keeps a manually opened history panel visible after remeasurement', () => {
 		const container = document.createElement('aside');
 		document.body.append(container);
